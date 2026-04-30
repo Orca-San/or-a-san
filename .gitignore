@@ -1,0 +1,29 @@
+# Local environment
+.env
+.env.local
+.env.*.local
+
+# OS/editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Dependencies/build output for future Next.js version
+node_modules/
+.next/
+out/
+dist/
+build/
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Local exports/backups
+orcasan-backup-*.json
+orcasan-*.csv
+orcasan-*.xls

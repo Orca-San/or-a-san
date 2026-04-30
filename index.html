@@ -1,0 +1,487 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>OrçaSan | Orçamentos de Saneamento</title>
+    <meta name="theme-color" content="#0f766e" />
+    <meta
+      name="description"
+      content="Aplicativo para orçamento de licitações de obras de saneamento básico."
+    />
+    <link rel="manifest" href="manifest.webmanifest" />
+    <link rel="icon" href="icons/orcasan-icon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="icons/orcasan-icon.svg" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar" aria-label="Navegação principal">
+        <div class="brand">
+          <div class="brand-mark" aria-hidden="true">OS</div>
+          <div>
+            <strong>OrçaSan</strong>
+            <span>Licitações de saneamento</span>
+          </div>
+        </div>
+
+        <nav class="nav-list" aria-label="Seções">
+          <a class="nav-item active" href="#dashboard">
+            <span aria-hidden="true">▦</span>
+            Dashboard
+          </a>
+          <a class="nav-item" href="#licitacoes">
+            <span aria-hidden="true">▥</span>
+            Licitações
+          </a>
+          <a class="nav-item" href="#licitacao">
+            <span aria-hidden="true">◎</span>
+            Licitação
+          </a>
+          <a class="nav-item" href="#orcamento">
+            <span aria-hidden="true">▤</span>
+            Planilha
+          </a>
+          <a class="nav-item" href="#bdi">
+            <span aria-hidden="true">%</span>
+            BDI
+          </a>
+          <a class="nav-item" href="#analise">
+            <span aria-hidden="true">◫</span>
+            Análise
+          </a>
+          <a class="nav-item" href="#composicoes">
+            <span aria-hidden="true">▧</span>
+            Composições
+          </a>
+          <a class="nav-item" href="#relatorios">
+            <span aria-hidden="true">□</span>
+            Relatórios
+          </a>
+          <a class="nav-item" href="#configuracoes">
+            <span aria-hidden="true">⚙</span>
+            Configurações
+          </a>
+        </nav>
+
+        <div class="side-card">
+          <span>Próxima abertura</span>
+          <strong id="next-opening-date">14/05/2026</strong>
+          <p id="next-opening-summary">Concorrência 012/2026 - Rede coletora de esgoto</p>
+        </div>
+      </aside>
+
+      <main class="main-content">
+        <header class="topbar">
+          <div>
+            <p class="eyebrow">MVP editável</p>
+            <h1>Orçamento de licitação</h1>
+            <p class="save-status" id="save-status">Salvo no navegador</p>
+          </div>
+          <div class="topbar-actions">
+            <button class="ghost-button" data-new-budget type="button">Nova licitação</button>
+            <button class="ghost-button" id="reset-demo" type="button">Restaurar exemplo</button>
+            <button class="ghost-button" id="export-csv" type="button">Exportar CSV</button>
+            <button class="ghost-button" id="export-xls" type="button">Gerar planilha</button>
+            <button class="ghost-button" id="export-backup" type="button">Backup JSON</button>
+            <button class="ghost-button" id="install-app" type="button" hidden>Instalar app</button>
+            <button class="ghost-button" id="save-data" type="button">Salvar local</button>
+            <button class="primary-button" id="print-proposal" type="button">Gerar proposta</button>
+          </div>
+        </header>
+
+        <section class="summary-grid page-section" id="dashboard" data-page="dashboard" aria-label="Resumo do orçamento">
+          <article class="metric">
+            <span>Valor sem BDI</span>
+            <strong id="metric-base">R$ 0,00</strong>
+            <small>Custo direto estimado</small>
+          </article>
+          <article class="metric">
+            <span>Valor com BDI</span>
+            <strong id="metric-total">R$ 0,00</strong>
+            <small>Proposta preliminar</small>
+          </article>
+          <article class="metric">
+            <span>BDI aplicado</span>
+            <strong id="metric-bdi">0,00%</strong>
+            <small>Percentual final calculado</small>
+          </article>
+          <article class="metric">
+            <span>Itens críticos</span>
+            <strong id="metric-critical">0</strong>
+            <small>Classe A da curva ABC</small>
+          </article>
+        </section>
+
+        <section class="charts-grid page-section" data-page="dashboard" aria-label="Gráficos da licitação selecionada">
+          <article class="panel chart-panel">
+            <div class="panel-header">
+              <div>
+                <p class="eyebrow">Licitação ativa</p>
+                <h2>Resumo visual</h2>
+              </div>
+              <span class="status-pill" id="active-budget-label">Selecionada</span>
+            </div>
+            <div class="active-budget-card" id="active-budget-card"></div>
+          </article>
+
+          <article class="panel chart-panel">
+            <div class="panel-header">
+              <div>
+                <p class="eyebrow">Etapas</p>
+                <h2>Distribuição do orçamento</h2>
+              </div>
+            </div>
+            <div class="stage-chart" id="stage-chart"></div>
+          </article>
+
+          <article class="panel chart-panel">
+            <div class="panel-header">
+              <div>
+                <p class="eyebrow">Curva ABC</p>
+                <h2>Concentração por classe</h2>
+              </div>
+            </div>
+            <div class="abc-chart-wrap" id="abc-chart-wrap"></div>
+          </article>
+
+          <article class="panel chart-panel">
+            <div class="panel-header">
+              <div>
+                <p class="eyebrow">BDI</p>
+                <h2>Composição percentual</h2>
+              </div>
+            </div>
+            <div class="bdi-chart" id="bdi-chart"></div>
+          </article>
+        </section>
+
+        <section class="panel bids-panel page-section" id="licitacoes" data-page="licitacoes" hidden>
+          <div class="panel-header">
+            <div>
+              <p class="eyebrow">Carteira</p>
+              <h2>Licitações cadastradas</h2>
+            </div>
+            <button class="ghost-button compact" data-new-budget type="button">Nova licitação</button>
+          </div>
+          <div class="pipeline-grid" id="pipeline-grid" aria-label="Esteira de licitações"></div>
+          <div class="filter-tabs" id="bid-filters" aria-label="Filtrar licitações por status"></div>
+          <div class="bid-list" id="bids-list"></div>
+        </section>
+
+        <section class="workspace-grid page-section" data-page="licitacao" hidden>
+          <article class="panel bid-panel" id="licitacao">
+            <div class="panel-header">
+              <div>
+                <p class="eyebrow">Dados do edital</p>
+                <h2>Licitação</h2>
+              </div>
+              <span class="status-pill" id="bid-status-pill">Em orçamento</span>
+            </div>
+
+            <div class="form-grid">
+              <label>
+                Empresa proponente
+                <input data-bid="company" value="Construtora Exemplo Saneamento Ltda." />
+              </label>
+              <label>
+                CNPJ
+                <input data-bid="companyDocument" value="12.345.678/0001-90" />
+              </label>
+              <label>
+                Obra
+                <input data-bid="title" value="Implantação de rede coletora de esgoto - Setor Norte" />
+              </label>
+              <label>
+                Órgão
+                <input data-bid="agency" value="Prefeitura Municipal de São Bento" />
+              </label>
+              <label>
+                Edital
+                <input data-bid="editalNumber" value="Concorrência 012/2026" />
+              </label>
+              <label>
+                Município/UF
+                <input data-bid="location" value="São Bento / SP" />
+              </label>
+              <label>
+                Tipo
+                <select data-bid="workType">
+                  <option>Rede coletora de esgoto</option>
+                  <option>Abastecimento de água</option>
+                  <option>Adutora</option>
+                  <option>ETE</option>
+                  <option>ETA</option>
+                </select>
+              </label>
+              <label>
+                Data de abertura
+                <input data-bid="openingDate" type="date" value="2026-05-14" />
+              </label>
+              <label>
+                Prazo de execução
+                <input data-bid="executionDays" type="number" min="1" value="180" />
+              </label>
+              <label>
+                Validade da proposta
+                <input data-bid="validityDays" type="number" min="1" value="60" />
+              </label>
+              <label>
+                Responsável técnico
+                <input data-bid="technicalOwner" value="Eng. Responsável" />
+              </label>
+              <label>
+                CREA/CAU
+                <input data-bid="technicalRegistry" value="CREA 0000000000" />
+              </label>
+              <label>
+                Status
+                <select data-bid="status">
+                  <option>Em orçamento</option>
+                  <option>Em revisão</option>
+                  <option>Enviada</option>
+                  <option>Vencida</option>
+                  <option>Perdida</option>
+                </select>
+              </label>
+            </div>
+          </article>
+
+        </section>
+
+        <section class="workspace-grid page-section" data-page="bdi" hidden>
+          <article class="panel bdi-panel" id="bdi">
+            <div class="panel-header">
+              <div>
+                <p class="eyebrow">Memória de cálculo</p>
+                <h2>BDI completo</h2>
+              </div>
+              <strong id="bdi-total">0,00%</strong>
+            </div>
+
+            <div class="bdi-summary-grid">
+              <div class="bdi-summary-card">
+                <span>BDI final</span>
+                <strong id="bdi-total-hero">0,00%</strong>
+              </div>
+              <div class="bdi-summary-card">
+                <span>Despesas indiretas</span>
+                <strong id="bdi-indirect-total">0,00%</strong>
+              </div>
+              <div class="bdi-summary-card">
+                <span>Tributos</span>
+                <strong id="bdi-tax-total">0,00%</strong>
+              </div>
+              <div class="bdi-summary-card">
+                <span>Fator multiplicador</span>
+                <strong id="bdi-factor">1,0000</strong>
+              </div>
+            </div>
+
+            <div class="formula-card">
+              <strong>Fórmula usada</strong>
+              <span>BDI = [((1 + AC + S + G + R) × (1 + DF) × (1 + L)) ÷ (1 - I) - 1] × 100</span>
+              <small>AC: administração central, S: seguros, G: garantias, R: risco, DF: despesas financeiras, L: lucro, I: tributos.</small>
+            </div>
+
+            <div class="bdi-list" aria-label="Composição do BDI">
+              <div class="bdi-group">
+                <h3>Despesas indiretas</h3>
+                <label>
+                  Administração central - AC
+                  <input class="bdi-input" data-bdi="admin" type="number" min="0" step="0.01" value="4.20" />
+                  <span class="field-help">Estrutura administrativa, engenharia, suporte, escritório e gestão.</span>
+                </label>
+                <label>
+                  Seguros - S
+                  <input class="bdi-input" data-bdi="insurance" type="number" min="0" step="0.01" value="0.40" />
+                  <span class="field-help">Seguros exigidos pelo edital ou pela operação da obra.</span>
+                </label>
+                <label>
+                  Garantias - G
+                  <input class="bdi-input" data-bdi="guarantees" type="number" min="0" step="0.01" value="0.40" />
+                  <span class="field-help">Garantia contratual, caução, carta-fiança ou seguro-garantia.</span>
+                </label>
+                <label>
+                  Risco - R
+                  <input class="bdi-input" data-bdi="risk" type="number" min="0" step="0.01" value="1.25" />
+                  <span class="field-help">Riscos técnicos, comerciais, climáticos, interferências e produtividade.</span>
+                </label>
+                <label>
+                  Despesas financeiras - DF
+                  <input class="bdi-input" data-bdi="finance" type="number" min="0" step="0.01" value="1.10" />
+                  <span class="field-help">Custo financeiro entre execução, medição, faturamento e recebimento.</span>
+                </label>
+              </div>
+
+              <div class="bdi-group">
+                <h3>Resultado e tributos</h3>
+                <label>
+                  Lucro - L
+                  <input class="bdi-input" data-bdi="profit" type="number" min="0" step="0.01" value="7.00" />
+                  <span class="field-help">Margem operacional pretendida para a proposta.</span>
+                </label>
+                <label>
+                  ISS
+                  <input class="bdi-input" data-bdi="iss" type="number" min="0" step="0.01" value="3.00" />
+                  <span class="field-help">Alíquota municipal incidente sobre serviços, conforme edital/município.</span>
+                </label>
+                <label>
+                  PIS/COFINS
+                  <input class="bdi-input" data-bdi="pisCofins" type="number" min="0" step="0.01" value="3.65" />
+                  <span class="field-help">Tributos federais, conforme regime tributário da empresa.</span>
+                </label>
+                <label>
+                  CPRB/INSS sobre receita
+                  <input class="bdi-input" data-bdi="cprb" type="number" min="0" step="0.01" value="0.00" />
+                  <span class="field-help">Usar quando aplicável ao regime tributário e enquadramento da obra.</span>
+                </label>
+                <label>
+                  Outros tributos
+                  <input class="bdi-input" data-bdi="otherTaxes" type="number" min="0" step="0.01" value="2.00" />
+                  <span class="field-help">Ajustes tributários específicos do edital ou da empresa.</span>
+                </label>
+              </div>
+            </div>
+          </article>
+        </section>
+
+        <section class="panel table-panel page-section" id="orcamento" data-page="orcamento" hidden>
+          <div class="panel-header">
+            <div>
+              <p class="eyebrow">Itens da proposta</p>
+              <h2>Planilha orçamentária editável</h2>
+            </div>
+            <div class="panel-actions">
+              <button class="ghost-button compact" id="download-csv-template" type="button">Modelo CSV</button>
+              <button class="ghost-button compact" id="import-csv" type="button">Importar CSV</button>
+              <button class="ghost-button compact" id="add-item" type="button">Adicionar item</button>
+              <input id="csv-file" type="file" accept=".csv,text/csv" hidden />
+            </div>
+          </div>
+
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Etapa</th>
+                  <th>Código</th>
+                  <th>Descrição</th>
+                  <th>Un.</th>
+                  <th>Qtd.</th>
+                  <th>Preço unit.</th>
+                  <th>Total s/ BDI</th>
+                  <th>Total c/ BDI</th>
+                  <th>ABC</th>
+                  <th>Ações</th>
+                </tr>
+              </thead>
+              <tbody id="items-body"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="analysis-grid page-section" id="analise" data-page="analise" hidden>
+          <article class="panel">
+            <div class="panel-header">
+              <div>
+                <p class="eyebrow">Curva ABC</p>
+                <h2>Itens mais relevantes</h2>
+              </div>
+            </div>
+            <div class="abc-list" id="abc-list"></div>
+          </article>
+
+          <article class="panel">
+            <div class="panel-header">
+              <div>
+                <p class="eyebrow">Riscos</p>
+                <h2>Alertas de orçamento</h2>
+              </div>
+            </div>
+            <div class="alerts-list" id="alerts-list"></div>
+          </article>
+        </section>
+
+        <section class="modules-grid page-section" data-page="composicoes" hidden>
+          <article class="panel" id="composicoes">
+            <div class="panel-header">
+              <div>
+                <p class="eyebrow">Banco próprio</p>
+                <h2>Composições base</h2>
+              </div>
+              <button class="ghost-button compact" id="add-composition" type="button">Nova composição</button>
+            </div>
+            <div class="composition-list" id="composition-list"></div>
+          </article>
+
+        </section>
+
+        <section class="modules-grid page-section" data-page="relatorios" hidden>
+          <article class="panel" id="relatorios">
+            <div class="panel-header">
+              <div>
+                <p class="eyebrow">Saídas do orçamento</p>
+                <h2>Relatórios</h2>
+              </div>
+            </div>
+            <div class="report-list" id="report-list"></div>
+          </article>
+        </section>
+
+        <section class="panel settings-panel page-section" id="configuracoes" data-page="configuracoes" hidden>
+          <div class="panel-header">
+            <div>
+              <p class="eyebrow">Portabilidade</p>
+              <h2>Usar em outra máquina</h2>
+            </div>
+          </div>
+          <div class="settings-grid">
+            <div class="setting-row">
+              <strong>Salvar local</strong>
+              <span>Grava os dados no navegador desta máquina. O OrçaSan também salva automaticamente enquanto você edita.</span>
+              <button class="ghost-button compact" id="save-data-secondary" type="button">Salvar local</button>
+            </div>
+            <div class="setting-row">
+              <strong>Exportar backup completo</strong>
+              <span>Baixa um arquivo JSON com tudo que foi criado. Use para levar dados para outra máquina ou guardar uma cópia.</span>
+              <button class="ghost-button compact" id="export-backup-secondary" type="button">Exportar backup JSON</button>
+            </div>
+            <div class="setting-row">
+              <strong>Importar backup</strong>
+              <span>Carrega um backup do OrçaSan gerado em outro computador.</span>
+              <button class="ghost-button compact" id="import-backup" type="button">Importar backup</button>
+              <input id="backup-file" type="file" accept="application/json,.json" hidden />
+            </div>
+            <div class="setting-row">
+              <strong>Versão SaaS</strong>
+              <span>Próxima fase: login, banco de dados, hospedagem e acesso por link.</span>
+              <button class="ghost-button compact" data-new-budget type="button">Criar nova proposta</button>
+            </div>
+            <div class="setting-row">
+              <strong>Aplicativo instalável</strong>
+              <span id="install-status">Quando disponível, instale o OrçaSan para abrir em janela própria com ícone.</span>
+              <button class="ghost-button compact" id="install-app-secondary" type="button">Instalar aplicativo</button>
+            </div>
+            <div class="setting-row">
+              <strong>Atualizar aplicativo</strong>
+              <span>Limpa o cache local e recarrega os arquivos mais recentes do OrçaSan.</span>
+              <button class="ghost-button compact" id="refresh-app" type="button">Atualizar app</button>
+            </div>
+            <div class="setting-row wide-setting">
+              <strong>Como alguém instala</strong>
+              <span>
+                Publique o OrçaSan em um link HTTPS. A pessoa acessa o link, clica em Instalar app ou usa o ícone de instalação do navegador.
+                Depois ele aparece no menu iniciar/área de trabalho como aplicativo.
+              </span>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <section class="proposal-print" id="proposal-print" hidden></section>
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    <script src="app.js"></script>
+  </body>
+</html>
