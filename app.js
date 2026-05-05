@@ -1,5 +1,11 @@
 const STORAGE_KEY = "orcasan.workspace.v2";
 const LEGACY_STORAGE_KEY = "orcasan.current-budget.v1";
+const CLOUD_CONFIG_KEY = "orcasan.cloud-config.v1";
+const CLOUD_SESSION_KEY = "orcasan.cloud-session.v1";
+const ADMIN_MODE_KEY = "orcasan.admin-mode.v1";
+const DEFAULT_CLOUD_API_URL = "https://dtfvrjlmncrijniqskhv.supabase.co/rest/v1/";
+const DEFAULT_CLOUD_PUBLISHABLE_KEY = "sb_publishable_qr_f9x2Os79RHQG0XhX_4Q_1uh14LGe";
+const PUBLIC_APP_URL = "https://orcasan.vercel.app/";
 
 function defaultBid() {
   return {
@@ -30,7 +36,7 @@ function defaultBdi() {
     iss: 3,
     pisCofins: 3.65,
     cprb: 0,
-    otherTaxes: 2,
+    otherTaxes: 0,
   };
 }
 
@@ -168,6 +174,12 @@ const dateFormatter = new Intl.DateTimeFormat("pt-BR", {
   timeZone: "UTC",
 });
 
+const appShell = document.querySelector(".app-shell");
+const authScreen = document.querySelector("#auth-screen");
+const authTabs = document.querySelectorAll("[data-auth-mode]");
+const authTitle = document.querySelector("#auth-title");
+const authHint = document.querySelector("#auth-hint");
+const authBackApp = document.querySelector("#auth-back-app");
 const itemsBody = document.querySelector("#items-body");
 const abcList = document.querySelector("#abc-list");
 const alertsList = document.querySelector("#alerts-list");
@@ -182,11 +194,15 @@ const stageChart = document.querySelector("#stage-chart");
 const abcChartWrap = document.querySelector("#abc-chart-wrap");
 const bdiChart = document.querySelector("#bdi-chart");
 const navItems = document.querySelectorAll(".nav-item");
+const workspaceNav = document.querySelector("#workspace-nav");
+const workspaceLinks = document.querySelectorAll("[data-workspace-link]");
 const pageSections = document.querySelectorAll(".page-section");
+const dashboardRecentList = document.querySelector("#dashboard-recent-list");
 const bdiInputs = document.querySelectorAll(".bdi-input");
 const bidInputs = document.querySelectorAll("[data-bid]");
 const addItemButton = document.querySelector("#add-item");
 const addCompositionButton = document.querySelector("#add-composition");
+const resetTaxBdiButton = document.querySelector("#reset-tax-bdi");
 const downloadCsvTemplateButton = document.querySelector("#download-csv-template");
 const importCsvButton = document.querySelector("#import-csv");
 const csvFileInput = document.querySelector("#csv-file");
@@ -208,6 +224,34 @@ const newBudgetButtons = document.querySelectorAll("[data-new-budget]");
 const saveStatus = document.querySelector("#save-status");
 const toast = document.querySelector("#toast");
 const proposalPrint = document.querySelector("#proposal-print");
+const cloudTechnicalPanel = document.querySelector("#cloud-technical-panel");
+const cloudApiUrlInput = document.querySelector("#cloud-api-url");
+const cloudPublishableKeyInput = document.querySelector("#cloud-publishable-key");
+const cloudStatus = document.querySelector("#cloud-status");
+const saveCloudConfigButton = document.querySelector("#save-cloud-config");
+const testCloudConnectionButton = document.querySelector("#test-cloud-connection");
+const createCloudWorkspaceButton = document.querySelector("#create-cloud-workspace");
+const syncActiveCloudButton = document.querySelector("#sync-active-cloud");
+const syncAllCloudButton = document.querySelector("#sync-all-cloud");
+const loadCloudDataButton = document.querySelector("#load-cloud-data");
+const authNameInput = document.querySelector("#auth-name");
+const authCompanyInput = document.querySelector("#auth-company");
+const authEmailInput = document.querySelector("#auth-email");
+const authPasswordInput = document.querySelector("#auth-password");
+const authStatus = document.querySelector("#auth-status");
+const signInCloudButton = document.querySelector("#sign-in-cloud");
+const signUpCloudButton = document.querySelector("#sign-up-cloud");
+const resendAuthEmailButton = document.querySelector("#resend-auth-email");
+const requestPasswordCloudButton = document.querySelector("#request-password-cloud");
+const updatePasswordCloudButton = document.querySelector("#update-password-cloud");
+const signOutCloudButton = document.querySelector("#sign-out-cloud");
+const settingsBdiPercent = document.querySelector("#settings-bdi-percent");
+const settingsUserEmail = document.querySelector("#settings-user-email");
+const settingsChangePasswordButton = document.querySelector("#settings-change-password");
+const settingsSignOutButton = document.querySelector("#settings-sign-out");
+const logoutConfirmation = document.querySelector("#logout-confirmation");
+const cancelLogoutButton = document.querySelector("#cancel-logout");
+const confirmLogoutButton = document.querySelector("#confirm-logout");
 
 function clone(value) {
   return JSON.parse(JSON.stringify(value));
@@ -251,7 +295,7 @@ function normalizeBdi(rawBdi) {
   if (source.taxes !== undefined && source.iss === undefined && source.pisCofins === undefined) {
     normalized.iss = 3;
     normalized.pisCofins = Math.max(parseNumber(source.taxes) - 5, 0);
-    normalized.otherTaxes = Math.min(parseNumber(source.taxes), 2);
+    normalized.otherTaxes = 0;
   }
 
   delete normalized.taxes;
@@ -265,6 +309,7 @@ function normalizeBudget(rawBudget, index) {
 
   return {
     id: source.id || `budget-${String(index + 1).padStart(2, "0")}`,
+    cloudBidId: source.cloudBidId || "",
     createdAt: source.createdAt || new Date().toISOString(),
     bid: {
       ...base.bid,
@@ -368,6 +413,18 @@ function showToast(message) {
   window.setTimeout(() => toast.classList.remove("visible"), 2200);
 }
 
+function isLocalAppOrigin() {
+  return ["127.0.0.1", "localhost"].includes(window.location.hostname);
+}
+
+function installUnavailableMessage() {
+  if (isLocalAppOrigin()) {
+    return `Este endereço é só de teste local. Para instalar sem depender do 127.0.0.1, abra ${PUBLIC_APP_URL} no Chrome e use o ícone de instalação.`;
+  }
+
+  return "Se o prompt não abrir, use o ícone de instalação do navegador ou verifique se o app já foi instalado.";
+}
+
 function updateInstallUi() {
   const isStandalone =
     window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
@@ -375,7 +432,9 @@ function updateInstallUi() {
   if (isStandalone) {
     installAppButton.hidden = true;
     installAppSecondaryButton.disabled = true;
-    installStatus.textContent = "O OrçaSan já está instalado como aplicativo neste dispositivo.";
+    installStatus.textContent = isLocalAppOrigin()
+      ? "Este atalho foi instalado a partir do 127.0.0.1 e depende do servidor local ligado. Para uso real, instale pelo link online em HTTPS."
+      : "O OrçaSan já está instalado como aplicativo neste dispositivo.";
     return;
   }
 
@@ -386,15 +445,15 @@ function updateInstallUi() {
     return;
   }
 
-  installAppButton.hidden = true;
-  installAppSecondaryButton.disabled = true;
-  installStatus.textContent =
-    "A instalação aparece quando o navegador reconhecer o app. Em produção, use um endereço HTTPS.";
+  installAppButton.hidden = false;
+  installAppSecondaryButton.disabled = false;
+  installStatus.textContent = installUnavailableMessage();
 }
 
 async function installApp() {
   if (!deferredInstallPrompt) {
-    showToast("Instalação ainda não disponível neste navegador.");
+    showToast(isLocalAppOrigin() ? "Instale pelo link online HTTPS, não pelo 127.0.0.1." : "Use o ícone de instalação do navegador.");
+    if (installStatus) installStatus.textContent = installUnavailableMessage();
     updateInstallUi();
     return;
   }
@@ -452,6 +511,1157 @@ async function refreshAppCache() {
   } catch {
     showToast("Não foi possível limpar o cache automaticamente.");
   }
+}
+
+function cloudProjectUrl(apiUrl) {
+  return normalizeCloudApiUrl(apiUrl).replace(/\/rest\/v1\/?$/, "");
+}
+
+function authRedirectUrl() {
+  const { origin, pathname } = window.location;
+  return `${origin}${pathname}`;
+}
+
+function isAdminMode() {
+  const params = new URLSearchParams(window.location.search);
+
+  if (params.get("admin") === "1") {
+    window.localStorage.setItem(ADMIN_MODE_KEY, "true");
+    return true;
+  }
+
+  if (params.get("admin") === "0") {
+    window.localStorage.removeItem(ADMIN_MODE_KEY);
+    return false;
+  }
+
+  return window.localStorage.getItem(ADMIN_MODE_KEY) === "true";
+}
+
+function normalizeCloudApiUrl(value) {
+  let url = String(value || "").trim();
+  if (!url) return DEFAULT_CLOUD_API_URL;
+
+  url = url.replace(/\/+$/, "");
+  if (!url.endsWith("/rest/v1")) url = `${url}/rest/v1`;
+
+  return `${url}/`;
+}
+
+const AUTH_MODE_COPY = {
+  signin: {
+    title: "Acessar conta",
+    hint: "",
+    status: "",
+    panel: "",
+  },
+  signup: {
+    title: "Criar conta",
+    hint: "",
+    status: "Preencha os dados da empresa para criar seu acesso.",
+    panel: "",
+  },
+  recover: {
+    title: "Recuperar senha",
+    hint: "",
+    status: "Você receberá um link para trocar a senha.",
+    panel: "",
+  },
+  reset: {
+    title: "Nova senha",
+    hint: "",
+    status: "Digite a nova senha recebida pelo fluxo de recuperação.",
+    panel: "",
+  },
+};
+
+let authMode = "signin";
+
+function setAuthMode(mode) {
+  authMode = AUTH_MODE_COPY[mode] ? mode : "signin";
+  const copy = AUTH_MODE_COPY[authMode];
+  const isSignup = authMode === "signup";
+  const isRecover = authMode === "recover";
+  const isReset = authMode === "reset";
+
+  if (authTitle) authTitle.textContent = copy.title;
+  if (authHint) authHint.textContent = copy.hint;
+
+  authTabs.forEach((tab) => {
+    const active = tab.dataset.authMode === authMode;
+    tab.classList.toggle("active", active);
+    tab.setAttribute("aria-selected", String(active));
+  });
+
+  document.querySelectorAll("[data-auth-signup]").forEach((field) => {
+    field.hidden = !isSignup;
+  });
+
+  document.querySelectorAll("[data-auth-password]").forEach((field) => {
+    field.hidden = isRecover;
+  });
+
+  document.querySelectorAll("[data-auth-email]").forEach((field) => {
+    field.hidden = isReset;
+  });
+
+  if (authPasswordInput) {
+    authPasswordInput.autocomplete = isSignup || isReset ? "new-password" : "current-password";
+    authPasswordInput.placeholder = isReset
+      ? "Digite a nova senha"
+      : isSignup
+        ? "Crie uma senha"
+        : "Digite sua senha";
+  }
+
+  if (signInCloudButton) signInCloudButton.hidden = authMode !== "signin";
+  if (signUpCloudButton) signUpCloudButton.hidden = authMode !== "signup";
+  if (resendAuthEmailButton) resendAuthEmailButton.hidden = authMode !== "signup";
+  if (requestPasswordCloudButton) requestPasswordCloudButton.hidden = !isRecover;
+  if (updatePasswordCloudButton) updatePasswordCloudButton.hidden = !isReset;
+
+  document.querySelectorAll("[data-auth-entry-link]").forEach((link) => {
+    link.hidden = authMode !== "signin";
+  });
+
+  document.querySelectorAll("[data-auth-return]").forEach((link) => {
+    link.hidden = authMode === "signin";
+  });
+
+  if (!loadCloudSession()?.user?.email) setAuthStatus(copy.status, "");
+}
+
+function loadCloudSession() {
+  try {
+    return JSON.parse(window.localStorage.getItem(CLOUD_SESSION_KEY) || "null");
+  } catch {
+    return null;
+  }
+}
+
+function hasAuthenticatedSession() {
+  const session = loadCloudSession();
+  if (!session?.access_token) return false;
+  if (session.authType === "recovery") return false;
+  if (session.expiresAt && session.expiresAt <= Date.now()) return false;
+  return true;
+}
+
+function extractAuthSession(payload) {
+  const candidate = payload?.session || payload;
+  if (!candidate?.access_token) return null;
+
+  const expiresIn = Number(candidate.expires_in) || 3600;
+  const expiresAt = candidate.expires_at ? Number(candidate.expires_at) * 1000 : Date.now() + expiresIn * 1000;
+
+  return {
+    access_token: candidate.access_token,
+    refresh_token: candidate.refresh_token || "",
+    expiresAt,
+    user: payload?.user || candidate.user || null,
+  };
+}
+
+function saveCloudSession(payload) {
+  const session = extractAuthSession(payload);
+  if (!session) return null;
+
+  window.localStorage.setItem(CLOUD_SESSION_KEY, JSON.stringify(session));
+  return session;
+}
+
+function sessionFromUrlHash() {
+  const hash = window.location.hash || "";
+  if (!hash.includes("access_token=")) return null;
+
+  const params = new URLSearchParams(hash.slice(1));
+  const accessToken = params.get("access_token");
+  if (!accessToken) return null;
+
+  const expiresIn = Number(params.get("expires_in")) || 3600;
+  const session = {
+    access_token: accessToken,
+    refresh_token: params.get("refresh_token") || "",
+    expiresAt: Date.now() + expiresIn * 1000,
+    user: null,
+    authType: params.get("type") || "",
+  };
+
+  window.localStorage.setItem(CLOUD_SESSION_KEY, JSON.stringify(session));
+  window.history.replaceState(null, "", "#conta");
+  return session;
+}
+
+function captureAuthRedirectSession() {
+  const session = sessionFromUrlHash();
+  if (!session) return null;
+
+  setAuthStatus("E-mail confirmado. Finalizando sessão...", "success");
+  showToast("E-mail confirmado.");
+  if (session.authType === "recovery") setAuthMode("reset");
+  else setAuthMode("signin");
+  return ensureFreshCloudSession();
+}
+
+function clearCloudSession() {
+  window.localStorage.removeItem(CLOUD_SESSION_KEY);
+}
+
+function setAuthStatus(message, kind = "") {
+  if (!authStatus) return;
+
+  authStatus.textContent = message;
+  authStatus.classList.toggle("success", kind === "success");
+  authStatus.classList.toggle("error", kind === "error");
+}
+
+function renderAuthState() {
+  const session = loadCloudSession();
+  const hasSession = hasAuthenticatedSession();
+  if (signOutCloudButton) signOutCloudButton.hidden = !hasSession;
+  if (authBackApp) authBackApp.hidden = !hasSession;
+
+  if (authMode === "reset") {
+    setAuthStatus("Digite a nova senha recebida pelo fluxo de recuperação.", "success");
+    if (signOutCloudButton) signOutCloudButton.disabled = !hasSession;
+    return;
+  }
+
+  if (session?.user?.email) {
+    if (authEmailInput) authEmailInput.value = session.user.email;
+    setAuthStatus("", "");
+    if (signOutCloudButton) signOutCloudButton.disabled = false;
+  } else {
+    setAuthStatus(AUTH_MODE_COPY[authMode]?.status || "", "");
+    if (signOutCloudButton) signOutCloudButton.disabled = true;
+  }
+
+  renderSettingsAccount();
+}
+
+function renderSettingsAccount() {
+  const session = loadCloudSession();
+  const email = session?.user?.email || authEmailInput?.value || "";
+  const hasSession = hasAuthenticatedSession();
+
+  if (settingsUserEmail) settingsUserEmail.textContent = email || "Conta não conectada";
+  if (settingsSignOutButton) settingsSignOutButton.disabled = !hasSession;
+  if (settingsChangePasswordButton) settingsChangePasswordButton.disabled = !email;
+}
+
+function renderSettingsPanel(budgetSummary = calculateBudget()) {
+  if (settingsBdiPercent) settingsBdiPercent.textContent = toPercent(budgetSummary.bdiPercent);
+  renderSettingsAccount();
+}
+
+function cloudAuthHeaders(config, session = null) {
+  const headers = {
+    apikey: config.publishableKey,
+    Accept: "application/json",
+  };
+
+  if (session?.access_token) headers.Authorization = `Bearer ${session.access_token}`;
+  return headers;
+}
+
+async function cloudAuthRequest(path, options = {}) {
+  const config = requireCloudConfig();
+  const url = `${cloudProjectUrl(config.apiUrl)}/auth/v1/${path}`;
+  const response = await fetch(url, {
+    method: options.method || "GET",
+    headers: {
+      ...cloudAuthHeaders(config, options.session),
+      ...(options.body ? { "Content-Type": "application/json" } : {}),
+    },
+    body: options.body ? JSON.stringify(options.body) : undefined,
+  });
+  const data = await readSupabaseResponse(response);
+
+  if (!response.ok) {
+    const detail =
+      typeof data === "string"
+        ? data
+        : data?.msg || data?.message || data?.error_description || `Serviço de autenticação respondeu ${response.status}.`;
+    throw new Error(detail);
+  }
+
+  return data;
+}
+
+async function ensureFreshCloudSession() {
+  const session = loadCloudSession();
+  if (!session?.access_token) return null;
+
+  if (session.expiresAt && session.expiresAt > Date.now() + 60000 && session.user) return session;
+
+  if (!session.user) {
+    try {
+      const userResponse = await cloudAuthRequest("user", {
+        session,
+      });
+      session.user = userResponse?.user || userResponse || null;
+      window.localStorage.setItem(CLOUD_SESSION_KEY, JSON.stringify(session));
+      if (session.user && session.expiresAt && session.expiresAt > Date.now() + 60000) return session;
+    } catch {
+      // Continue to refresh-token flow when available.
+    }
+  }
+
+  if (!session.refresh_token) return session;
+
+  try {
+    const refreshed = await cloudAuthRequest("token?grant_type=refresh_token", {
+      method: "POST",
+      body: { refresh_token: session.refresh_token },
+    });
+    return saveCloudSession(refreshed);
+  } catch {
+    clearCloudSession();
+    renderAuthState();
+    return null;
+  }
+}
+
+function loadCloudConfig() {
+  try {
+    const stored = JSON.parse(window.localStorage.getItem(CLOUD_CONFIG_KEY) || "{}");
+    return {
+      apiUrl: normalizeCloudApiUrl(stored.apiUrl || DEFAULT_CLOUD_API_URL),
+      publishableKey: String(stored.publishableKey || DEFAULT_CLOUD_PUBLISHABLE_KEY).trim(),
+      organizationId: stored.organizationId || "",
+    };
+  } catch {
+    return {
+      apiUrl: DEFAULT_CLOUD_API_URL,
+      publishableKey: DEFAULT_CLOUD_PUBLISHABLE_KEY,
+      organizationId: "",
+    };
+  }
+}
+
+function persistCloudConfig(config) {
+  window.localStorage.setItem(
+    CLOUD_CONFIG_KEY,
+    JSON.stringify({
+      apiUrl: normalizeCloudApiUrl(config.apiUrl),
+      publishableKey: String(config.publishableKey || "").trim(),
+      organizationId: config.organizationId || "",
+    }),
+  );
+}
+
+function setCloudStatus(message, kind = "") {
+  if (!cloudStatus) return;
+
+  cloudStatus.textContent = message;
+  cloudStatus.classList.toggle("success", kind === "success");
+  cloudStatus.classList.toggle("error", kind === "error");
+}
+
+function renderCloudConfig() {
+  if (!cloudApiUrlInput || !cloudPublishableKeyInput) return;
+
+  if (cloudTechnicalPanel) {
+    cloudTechnicalPanel.hidden = true;
+    cloudTechnicalPanel.setAttribute("aria-hidden", "true");
+  }
+
+  const config = loadCloudConfig();
+  cloudApiUrlInput.value = config.apiUrl;
+  cloudPublishableKeyInput.value = config.publishableKey;
+
+  if (config.publishableKey && config.organizationId) {
+    setCloudStatus("Conexão salva. Workspace pronto para sincronizar.", "success");
+  } else if (config.publishableKey) {
+    setCloudStatus("Chave salva. Teste a conexão e crie o workspace.", "");
+  } else {
+    setCloudStatus("Cole a API URL e a publishable key para ativar a nuvem.", "");
+  }
+}
+
+function saveCloudConfig(showFeedback = true) {
+  const current = loadCloudConfig();
+  const config = {
+    ...current,
+    apiUrl: normalizeCloudApiUrl(cloudApiUrlInput?.value || current.apiUrl),
+    publishableKey: String(cloudPublishableKeyInput?.value || "").trim(),
+  };
+
+  persistCloudConfig(config);
+
+  if (showFeedback) {
+    setCloudStatus("Conexão salva neste navegador.", "success");
+    showToast("Conexão da nuvem salva.");
+  }
+
+  return config;
+}
+
+function requireCloudConfig() {
+  const config = saveCloudConfig(false);
+
+  if (!config.apiUrl || !config.publishableKey) {
+    throw new Error("Informe a API URL e a publishable key.");
+  }
+
+  return config;
+}
+
+function cloudHeaders(config, prefer = "return=representation") {
+  const headers = {
+    apikey: config.publishableKey,
+    Accept: "application/json",
+  };
+
+  if (prefer) headers.Prefer = prefer;
+  return headers;
+}
+
+async function readSupabaseResponse(response) {
+  const text = await response.text();
+  if (!text) return null;
+
+  try {
+    return JSON.parse(text);
+  } catch {
+    return text;
+  }
+}
+
+function supabaseErrorMessage(error) {
+  const message = String(error?.message || error || "Erro inesperado.");
+
+  if (/permission denied|row-level security|violates row-level security/i.test(message)) {
+    return "Conexão chegou no Supabase, mas falta liberar permissão/API para estas tabelas.";
+  }
+
+  if (/Failed to fetch|NetworkError/i.test(message)) {
+    return "Não consegui acessar o Supabase. Confira a API URL.";
+  }
+
+  return message.length > 170 ? `${message.slice(0, 170)}...` : message;
+}
+
+async function supabaseRequest(path, options = {}) {
+  const config = requireCloudConfig();
+  const session = await ensureFreshCloudSession();
+  const baseUrl = normalizeCloudApiUrl(config.apiUrl).replace(/\/+$/, "");
+  const response = await fetch(`${baseUrl}/${path}`, {
+    method: options.method || "GET",
+    headers: {
+      ...cloudHeaders(config, options.prefer),
+      ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
+      ...(options.body ? { "Content-Type": "application/json" } : {}),
+      ...(options.headers || {}),
+    },
+    body: options.body ? JSON.stringify(options.body) : undefined,
+  });
+
+  const data = await readSupabaseResponse(response);
+
+  if (!response.ok) {
+    const detail =
+      typeof data === "string"
+        ? data
+        : data?.message || data?.hint || data?.details || `Supabase respondeu ${response.status}.`;
+    throw new Error(detail);
+  }
+
+  return data;
+}
+
+function setCloudBusy(isBusy) {
+  [
+    saveCloudConfigButton,
+    testCloudConnectionButton,
+    createCloudWorkspaceButton,
+    syncActiveCloudButton,
+    syncAllCloudButton,
+    loadCloudDataButton,
+  ].forEach((button) => {
+    if (button) button.disabled = isBusy;
+  });
+}
+
+async function runCloudAction(workingMessage, successMessage, action) {
+  setCloudBusy(true);
+  setCloudStatus(workingMessage, "");
+
+  try {
+    const result = await action();
+    setCloudStatus(successMessage, "success");
+    showToast(successMessage);
+    return result;
+  } catch (error) {
+    console.error(error);
+    const message = supabaseErrorMessage(error);
+    setCloudStatus(message, "error");
+    showToast("Ação de nuvem não concluída.");
+    return null;
+  } finally {
+    setCloudBusy(false);
+  }
+}
+
+function setAuthBusy(isBusy) {
+  [
+    signInCloudButton,
+    signUpCloudButton,
+    resendAuthEmailButton,
+    requestPasswordCloudButton,
+    updatePasswordCloudButton,
+    signOutCloudButton,
+  ].forEach((button) => {
+    if (!button) return;
+    button.disabled = isBusy || (button === signOutCloudButton && !loadCloudSession()?.access_token);
+  });
+}
+
+async function runAuthAction(workingMessage, successMessage, action) {
+  setAuthBusy(true);
+  setAuthStatus(workingMessage, "");
+
+  try {
+    const result = await action();
+    if (successMessage) {
+      setAuthStatus(successMessage, "success");
+      showToast(successMessage);
+      renderAuthState();
+    }
+    return result;
+  } catch (error) {
+    console.error(error);
+    const message = supabaseErrorMessage(error);
+    setAuthStatus(message, "error");
+    showToast("Ação de conta não concluída.");
+    return null;
+  } finally {
+    setAuthBusy(false);
+  }
+}
+
+function authFormPayload() {
+  return {
+    name: String(authNameInput?.value || "").trim(),
+    company: String(authCompanyInput?.value || activeBid().company || "").trim(),
+    email: String(authEmailInput?.value || "").trim().toLowerCase(),
+    password: String(authPasswordInput?.value || ""),
+  };
+}
+
+function validateAuthForm({ email, password }) {
+  if (!email || !email.includes("@")) throw new Error("Informe um e-mail válido.");
+  if (!password || password.length < 6) throw new Error("A senha precisa ter pelo menos 6 caracteres.");
+}
+
+async function ensureCloudProfile(user, form = authFormPayload()) {
+  if (!user?.id) throw new Error("Usuário autenticado não encontrado.");
+
+  return supabaseRequest("profiles?on_conflict=id", {
+    method: "POST",
+    body: {
+      id: user.id,
+      full_name: form.name || user.email || "",
+      email: user.email || form.email || "",
+    },
+    prefer: "resolution=merge-duplicates,return=representation",
+  });
+}
+
+async function ensureCloudMembership(organizationId, userId) {
+  if (!organizationId || !userId) return null;
+
+  const existingRows = await supabaseRequest(
+    `organization_members?organization_id=eq.${encodeURIComponent(organizationId)}&user_id=eq.${encodeURIComponent(userId)}&select=organization_id,user_id&limit=1`,
+    { prefer: "" },
+  );
+
+  if (Array.isArray(existingRows) && existingRows[0]) return existingRows[0];
+
+  const memberRows = await supabaseRequest("organization_members", {
+    method: "POST",
+    body: {
+      organization_id: organizationId,
+      user_id: userId,
+      role: "owner",
+    },
+    prefer: "return=representation",
+  });
+
+  return Array.isArray(memberRows) ? memberRows[0] : memberRows;
+}
+
+async function syncAuthProfileAndWorkspace(form = authFormPayload()) {
+  const session = await ensureFreshCloudSession();
+  const user = session?.user;
+  if (!user?.id) throw new Error("Entre na conta antes de configurar o workspace.");
+
+  await ensureCloudProfile(user, form);
+  if (form.company) activeBid().company = form.company;
+  const organization = await ensureCloudOrganization();
+  await ensureCloudMembership(organization.id, user.id);
+  hydrateForm();
+  saveState();
+
+  return organization;
+}
+
+async function signUpCloudAccount() {
+  return runAuthAction("Criando conta...", "", async () => {
+    const form = authFormPayload();
+    validateAuthForm(form);
+
+    const response = await cloudAuthRequest(`signup?redirect_to=${encodeURIComponent(authRedirectUrl())}`, {
+      method: "POST",
+      body: {
+        email: form.email,
+        password: form.password,
+        data: {
+          full_name: form.name,
+          company_name: form.company,
+        },
+      },
+    });
+    const session = saveCloudSession(response);
+
+    if (!session) {
+      setAuthStatus("Conta criada. Confirme o e-mail e depois clique em Entrar.", "success");
+      showToast("Conta criada. Verifique o e-mail.");
+      return response;
+    }
+
+    await syncAuthProfileAndWorkspace(form);
+    renderAuthState();
+    setAuthStatus("Conta criada com sucesso.", "success");
+    showToast("Conta criada e conectada.");
+    showPage("#dashboard");
+    return response;
+  });
+}
+
+async function signInCloudAccount() {
+  return runAuthAction("Entrando na conta...", "", async () => {
+    const form = authFormPayload();
+    validateAuthForm(form);
+
+    const response = await cloudAuthRequest("token?grant_type=password", {
+      method: "POST",
+      body: {
+        email: form.email,
+        password: form.password,
+      },
+    });
+    const session = saveCloudSession(response);
+    if (!session) throw new Error("Não foi possível iniciar sessão.");
+
+    await syncAuthProfileAndWorkspace(form);
+    renderAuthState();
+    setAuthStatus("Acesso confirmado.", "success");
+    showToast("Conta conectada.");
+    showPage("#dashboard");
+    return response;
+  });
+}
+
+async function resendAuthConfirmationEmail() {
+  return runAuthAction("Reenviando confirmação...", "", async () => {
+    const form = authFormPayload();
+    if (!form.email || !form.email.includes("@")) throw new Error("Informe o e-mail para reenviar.");
+
+    await cloudAuthRequest("resend", {
+      method: "POST",
+      body: {
+        type: "signup",
+        email: form.email,
+        options: {
+          email_redirect_to: authRedirectUrl(),
+        },
+      },
+    });
+
+    setAuthStatus("Confirmação reenviada. Verifique caixa de entrada e spam.", "success");
+    showToast("Confirmação reenviada.");
+  });
+}
+
+async function requestPasswordRecoveryEmail() {
+  return runAuthAction("Enviando recuperação...", "", async () => {
+    const form = authFormPayload();
+    if (!form.email || !form.email.includes("@")) throw new Error("Informe o e-mail de recuperação.");
+
+    await cloudAuthRequest(`recover?redirect_to=${encodeURIComponent(authRedirectUrl())}`, {
+      method: "POST",
+      body: {
+        email: form.email,
+      },
+    });
+
+    setAuthStatus("E-mail de recuperação enviado. Verifique caixa de entrada e spam.", "success");
+    showToast("Recuperação enviada.");
+  });
+}
+
+async function updateCloudPassword() {
+  return runAuthAction("Salvando nova senha...", "", async () => {
+    const form = authFormPayload();
+    if (!form.password || form.password.length < 6) throw new Error("A nova senha precisa ter pelo menos 6 caracteres.");
+
+    const session = await ensureFreshCloudSession();
+    if (!session?.access_token) throw new Error("Abra o link de recuperação novamente para trocar a senha.");
+
+    await cloudAuthRequest("user", {
+      method: "PUT",
+      session,
+      body: {
+        password: form.password,
+      },
+    });
+
+    setAuthMode("signin");
+    setAuthStatus("Senha atualizada. Você já pode entrar.", "success");
+    showToast("Senha atualizada.");
+  });
+}
+
+async function signOutCloudAccount() {
+  return runAuthAction("Saindo da conta...", "Sessão encerrada.", async () => {
+    const session = loadCloudSession();
+
+    if (session?.access_token) {
+      try {
+        await cloudAuthRequest("logout", {
+          method: "POST",
+          session,
+        });
+      } catch {
+        // The local session is still cleared if the remote logout token has expired.
+      }
+    }
+
+    clearCloudSession();
+    setAuthMode("signin");
+    showPage("#conta");
+  });
+}
+
+function closeLogoutConfirmation() {
+  if (logoutConfirmation) logoutConfirmation.hidden = true;
+}
+
+function requestSignOutConfirmation() {
+  if (!hasAuthenticatedSession()) {
+    showToast("Nenhuma conta conectada.");
+    return;
+  }
+
+  if (!logoutConfirmation) {
+    signOutCloudAccount();
+    return;
+  }
+
+  logoutConfirmation.hidden = false;
+  cancelLogoutButton?.focus();
+}
+
+function openPasswordRecoveryFromSettings() {
+  const email = loadCloudSession()?.user?.email || authEmailInput?.value || "";
+  if (authEmailInput && email) authEmailInput.value = email;
+  setAuthMode("recover");
+  showPage("#conta");
+}
+
+async function testCloudConnection() {
+  return runCloudAction("Testando conexão com o Supabase...", "Supabase conectado.", async () => {
+    const session = loadCloudSession();
+
+    if (session?.access_token) {
+      await supabaseRequest("organizations?select=id,name&limit=1", { prefer: "" });
+      return;
+    }
+
+    const config = requireCloudConfig();
+    const response = await fetch(normalizeCloudApiUrl(config.apiUrl), {
+      headers: cloudHeaders(config, ""),
+    });
+
+    if (!response.ok) throw new Error(`Supabase respondeu ${response.status}.`);
+  });
+}
+
+function locationParts(location) {
+  const [city, stateCode] = String(location || "")
+    .split("/")
+    .map((part) => part.trim());
+
+  return {
+    city: city || null,
+    state: stateCode || null,
+  };
+}
+
+async function ensureCloudOrganization() {
+  const config = requireCloudConfig();
+  const session = await ensureFreshCloudSession();
+  const user = session?.user;
+
+  if (config.organizationId) {
+    const existing = await supabaseRequest(
+      `organizations?id=eq.${encodeURIComponent(config.organizationId)}&select=id,name&limit=1`,
+      { prefer: "" },
+    );
+
+    if (Array.isArray(existing) && existing[0]) {
+      if (user?.id) await ensureCloudMembership(existing[0].id, user.id);
+      return existing[0];
+    }
+  }
+
+  const bid = activeBid();
+  const location = locationParts(bid.location);
+  const organizationPayload = {
+    name: bid.company || "OrçaSan Workspace",
+    legal_name: bid.company || null,
+    document_number: bid.companyDocument || null,
+    city: location.city,
+    state: location.state,
+    ...(user?.id ? { owner_user_id: user.id } : {}),
+  };
+  let organizationRows;
+
+  try {
+    organizationRows = await supabaseRequest("organizations", {
+      method: "POST",
+      body: organizationPayload,
+      prefer: "return=representation",
+    });
+  } catch (error) {
+    if (!/owner_user_id/i.test(String(error?.message || error))) throw error;
+
+    const { owner_user_id: _ownerUserId, ...legacyPayload } = organizationPayload;
+    organizationRows = await supabaseRequest("organizations", {
+      method: "POST",
+      body: legacyPayload,
+      prefer: "return=representation",
+    });
+  }
+  const organization = Array.isArray(organizationRows) ? organizationRows[0] : organizationRows;
+
+  if (!organization?.id) throw new Error("Workspace não retornou ID no Supabase.");
+
+  if (user?.id) await ensureCloudMembership(organization.id, user.id);
+
+  persistCloudConfig({
+    ...config,
+    organizationId: organization.id,
+  });
+
+  return organization;
+}
+
+async function createCloudWorkspace() {
+  return runCloudAction("Criando workspace na nuvem...", "Workspace da nuvem pronto.", ensureCloudOrganization);
+}
+
+function cloudBidPayload(budget, organizationId) {
+  const bid = budget.bid;
+
+  return {
+    organization_id: organizationId,
+    title: bid.title || "Licitação sem nome",
+    agency: bid.agency || null,
+    edital_number: bid.editalNumber || null,
+    location: bid.location || null,
+    work_type: bid.workType || null,
+    opening_date: bid.openingDate || null,
+    execution_days: Number(bid.executionDays) || 0,
+    validity_days: Number(bid.validityDays) || 0,
+    technical_owner: bid.technicalOwner || null,
+    technical_registry: bid.technicalRegistry || null,
+    status: bid.status || "Em orçamento",
+    updated_at: new Date().toISOString(),
+  };
+}
+
+function cloudBdiPayload(bidId, bdi) {
+  const normalized = normalizeBdi(bdi);
+
+  return {
+    bid_id: bidId,
+    admin: parseNumber(normalized.admin),
+    insurance: parseNumber(normalized.insurance),
+    guarantees: parseNumber(normalized.guarantees),
+    risk: parseNumber(normalized.risk),
+    finance: parseNumber(normalized.finance),
+    profit: parseNumber(normalized.profit),
+    iss: parseNumber(normalized.iss),
+    pis_cofins: parseNumber(normalized.pisCofins),
+    cprb: parseNumber(normalized.cprb),
+    other_taxes: parseNumber(normalized.otherTaxes),
+  };
+}
+
+function cloudBudgetItemsPayload(bidId, items) {
+  return items.map((item, index) => ({
+    bid_id: bidId,
+    position: index + 1,
+    stage: item.stage || null,
+    code: item.code || null,
+    description: item.description || "Item sem descrição",
+    unit: item.unit || "un",
+    quantity: parseNumber(item.quantity),
+    unit_price: parseNumber(item.unitPrice),
+  }));
+}
+
+async function replaceCloudBdiSettings(bidId, bdi) {
+  await supabaseRequest(`bdi_settings?bid_id=eq.${encodeURIComponent(bidId)}`, {
+    method: "DELETE",
+    prefer: "return=minimal",
+  });
+
+  return supabaseRequest("bdi_settings", {
+    method: "POST",
+    body: cloudBdiPayload(bidId, bdi),
+    prefer: "return=representation",
+  });
+}
+
+async function replaceCloudBudgetItems(bidId, items) {
+  await supabaseRequest(`budget_items?bid_id=eq.${encodeURIComponent(bidId)}`, {
+    method: "DELETE",
+    prefer: "return=minimal",
+  });
+
+  const payload = cloudBudgetItemsPayload(bidId, items);
+  if (!payload.length) return [];
+
+  return supabaseRequest("budget_items", {
+    method: "POST",
+    body: payload,
+    prefer: "return=representation",
+  });
+}
+
+async function saveBudgetToCloud(budget, organization = null) {
+  const workspace = organization || (await ensureCloudOrganization());
+  const payload = cloudBidPayload(budget, workspace.id);
+  let cloudBid = null;
+
+  if (budget.cloudBidId) {
+    const updatedRows = await supabaseRequest(`bids?id=eq.${encodeURIComponent(budget.cloudBidId)}`, {
+      method: "PATCH",
+      body: payload,
+      prefer: "return=representation",
+    });
+    cloudBid = Array.isArray(updatedRows) ? updatedRows[0] : updatedRows;
+  }
+
+  if (!cloudBid?.id) {
+    const createdRows = await supabaseRequest("bids", {
+      method: "POST",
+      body: payload,
+      prefer: "return=representation",
+    });
+    cloudBid = Array.isArray(createdRows) ? createdRows[0] : createdRows;
+  }
+
+  if (!cloudBid?.id) throw new Error("Licitação não retornou ID no Supabase.");
+
+  budget.cloudBidId = cloudBid.id;
+  await replaceCloudBdiSettings(cloudBid.id, budget.bdi);
+  await replaceCloudBudgetItems(cloudBid.id, budget.items);
+
+  return cloudBid;
+}
+
+function cloudCompositionsPayload(organizationId) {
+  return state.compositions.map((composition) => ({
+    organization_id: organizationId,
+    code: composition.code || null,
+    title: composition.title || "Composição sem nome",
+    unit: composition.unit || "un",
+    unit_cost: parseNumber(composition.cost),
+    note: composition.note || null,
+  }));
+}
+
+async function replaceCloudCompositions(organizationId) {
+  await supabaseRequest(`compositions?organization_id=eq.${encodeURIComponent(organizationId)}`, {
+    method: "DELETE",
+    prefer: "return=minimal",
+  });
+
+  const payload = cloudCompositionsPayload(organizationId);
+  if (!payload.length) return [];
+
+  return supabaseRequest("compositions", {
+    method: "POST",
+    body: payload,
+    prefer: "return=representation",
+  });
+}
+
+async function syncActiveBudgetToCloud() {
+  return runCloudAction("Enviando licitação atual para a nuvem...", "Licitação enviada para a nuvem.", async () => {
+    const organization = await ensureCloudOrganization();
+    await saveBudgetToCloud(getActiveBudget(), organization);
+    saveState();
+  });
+}
+
+async function syncAllDataToCloud() {
+  return runCloudAction("Enviando carteira completa para a nuvem...", "Carteira enviada para a nuvem.", async () => {
+    const organization = await ensureCloudOrganization();
+
+    for (const budget of state.budgets) {
+      await saveBudgetToCloud(budget, organization);
+    }
+
+    await replaceCloudCompositions(organization.id);
+    saveState();
+    render();
+  });
+}
+
+async function findCloudOrganization() {
+  const config = requireCloudConfig();
+
+  if (config.organizationId) {
+    const existing = await supabaseRequest(
+      `organizations?id=eq.${encodeURIComponent(config.organizationId)}&select=*&limit=1`,
+      { prefer: "" },
+    );
+
+    if (Array.isArray(existing) && existing[0]) return existing[0];
+  }
+
+  const organizations = await supabaseRequest("organizations?select=*&order=created_at.desc&limit=1", {
+    prefer: "",
+  });
+  const organization = Array.isArray(organizations) ? organizations[0] : null;
+
+  if (!organization?.id) throw new Error("Nenhum workspace encontrado na nuvem.");
+
+  persistCloudConfig({
+    ...config,
+    organizationId: organization.id,
+  });
+
+  return organization;
+}
+
+function mapCloudBdi(row) {
+  return normalizeBdi({
+    admin: Number(row?.admin) || 0,
+    insurance: Number(row?.insurance) || 0,
+    guarantees: Number(row?.guarantees) || 0,
+    risk: Number(row?.risk) || 0,
+    finance: Number(row?.finance) || 0,
+    profit: Number(row?.profit) || 0,
+    iss: Number(row?.iss) || 0,
+    pisCofins: Number(row?.pis_cofins) || 0,
+    cprb: Number(row?.cprb) || 0,
+    otherTaxes: Number(row?.other_taxes) || 0,
+  });
+}
+
+function mapCloudItem(row, index) {
+  return normalizeItem(
+    {
+      id: `cloud-item-${row.id || index}`,
+      stage: row.stage || "",
+      code: row.code || "",
+      description: row.description || "",
+      unit: row.unit || "un",
+      quantity: Number(row.quantity) || 0,
+      unitPrice: Number(row.unit_price) || 0,
+    },
+    index,
+  );
+}
+
+function mapCloudBid(row, organization, bdiRow, itemRows, index) {
+  return normalizeBudget(
+    {
+      id: `cloud-budget-${row.id}`,
+      cloudBidId: row.id,
+      createdAt: row.created_at || new Date().toISOString(),
+      bid: {
+        company: organization.legal_name || organization.name || defaultBid().company,
+        companyDocument: organization.document_number || "",
+        title: row.title || "",
+        agency: row.agency || "",
+        editalNumber: row.edital_number || "",
+        location: row.location || "",
+        workType: row.work_type || "",
+        openingDate: row.opening_date || "",
+        executionDays: Number(row.execution_days) || 0,
+        validityDays: Number(row.validity_days) || 0,
+        technicalOwner: row.technical_owner || "",
+        technicalRegistry: row.technical_registry || "",
+        status: row.status || "Em orçamento",
+      },
+      bdi: mapCloudBdi(bdiRow),
+      items: itemRows.map(mapCloudItem),
+    },
+    index,
+  );
+}
+
+function mapCloudComposition(row, index) {
+  return normalizeComposition(
+    {
+      id: `cloud-composition-${row.id || index}`,
+      code: row.code || "",
+      title: row.title || "",
+      unit: row.unit || "un",
+      cost: Number(row.unit_cost) || 0,
+      note: row.note || "",
+    },
+    index,
+  );
+}
+
+async function loadDataFromCloud() {
+  const confirmed = window.confirm("Carregar dados da nuvem? Os dados atuais deste navegador serão substituídos.");
+  if (!confirmed) return null;
+
+  return runCloudAction("Carregando dados da nuvem...", "Dados carregados da nuvem.", async () => {
+    const organization = await findCloudOrganization();
+    const cloudBids = await supabaseRequest(
+      `bids?organization_id=eq.${encodeURIComponent(organization.id)}&select=*&order=created_at.desc`,
+      { prefer: "" },
+    );
+    const budgets = [];
+
+    for (const [index, cloudBid] of (cloudBids || []).entries()) {
+      const [bdiRows, itemRows] = await Promise.all([
+        supabaseRequest(`bdi_settings?bid_id=eq.${encodeURIComponent(cloudBid.id)}&select=*&limit=1`, {
+          prefer: "",
+        }),
+        supabaseRequest(`budget_items?bid_id=eq.${encodeURIComponent(cloudBid.id)}&select=*&order=position.asc`, {
+          prefer: "",
+        }),
+      ]);
+
+      budgets.push(mapCloudBid(cloudBid, organization, bdiRows?.[0], itemRows || [], index));
+    }
+
+    const cloudCompositions = await supabaseRequest(
+      `compositions?organization_id=eq.${encodeURIComponent(organization.id)}&select=*&order=created_at.asc`,
+      { prefer: "" },
+    );
+
+    state = normalizeState({
+      activeBudgetId: budgets[0]?.id,
+      budgets: budgets.length ? budgets : [demoBudget()],
+      compositions: (cloudCompositions || []).map(mapCloudComposition),
+    });
+
+    hydrateForm();
+    render();
+    saveState();
+  });
 }
 
 function escapeHtml(value) {
@@ -529,7 +1739,7 @@ function getBdiEntries(budget = getActiveBudget()) {
     ["ISS", bdi.iss],
     ["PIS/COFINS", bdi.pisCofins],
     ["CPRB/INSS receita", bdi.cprb],
-    ["Outros tributos", bdi.otherTaxes],
+    ["Outros tributos indiretos", bdi.otherTaxes],
   ];
 }
 
@@ -692,12 +1902,49 @@ function renderBidFilters() {
     .join("");
 }
 
+function renderDashboardOverview() {
+  const portfolio = state.budgets.map((budget) => ({
+    budget,
+    totals: calculateBudget(budget),
+  }));
+  const totalValue = portfolio.reduce((sum, item) => sum + item.totals.totalWithBdi, 0);
+  const inProgress = state.budgets.filter((budget) =>
+    ["Em orçamento", "Em revisão"].includes(budget.bid.status || "Em orçamento"),
+  ).length;
+  const finished = state.budgets.filter((budget) =>
+    ["Enviada", "Vencida", "Perdida"].includes(budget.bid.status || "Em orçamento"),
+  ).length;
+
+  document.querySelector("#metric-bids-total").textContent = state.budgets.length;
+  document.querySelector("#metric-portfolio-total").textContent = toCurrency(totalValue);
+  document.querySelector("#metric-in-progress").textContent = inProgress;
+  document.querySelector("#metric-finished").textContent = finished;
+
+  if (!dashboardRecentList) return;
+
+  dashboardRecentList.innerHTML = portfolio
+    .sort((a, b) => String(b.budget.createdAt || "").localeCompare(String(a.budget.createdAt || "")))
+    .slice(0, 5)
+    .map(({ budget, totals }) => {
+      const isActive = budget.id === state.activeBudgetId;
+
+      return `
+        <article class="recent-bid-row ${isActive ? "active" : ""}">
+          <div>
+            <span>${escapeHtml(budget.bid.editalNumber || "Sem edital")} • ${escapeHtml(budget.bid.status || "Em orçamento")}</span>
+            <strong>${escapeHtml(budget.bid.title || "Licitação sem nome")}</strong>
+            <small>${escapeHtml(budget.bid.agency || "Órgão não informado")} • ${toCurrency(totals.totalWithBdi)}</small>
+          </div>
+          <button class="ghost-button compact" data-dashboard-open-budget="${escapeHtml(budget.id)}" type="button">Abrir</button>
+        </article>
+      `;
+    })
+    .join("");
+}
+
 function renderSummary(budget) {
   const bdiBreakdown = getBdiBreakdown();
-  document.querySelector("#metric-base").textContent = toCurrency(budget.totalBase);
-  document.querySelector("#metric-total").textContent = toCurrency(budget.totalWithBdi);
-  document.querySelector("#metric-bdi").textContent = toPercent(budget.bdiPercent);
-  document.querySelector("#metric-critical").textContent = budget.criticalItems;
+  renderDashboardOverview();
   document.querySelector("#bdi-total").textContent = toPercent(budget.bdiPercent);
   document.querySelector("#bdi-total-hero").textContent = toPercent(bdiBreakdown.totalPercent);
   document.querySelector("#bdi-indirect-total").textContent = toPercent(bdiBreakdown.indirectPercent);
@@ -1014,12 +2261,14 @@ function renderReports(budgetSummary) {
 function render() {
   const budgetSummary = calculateBudget();
 
+  renderCloudConfig();
   renderBidMeta();
   renderPipeline();
   renderBidFilters();
   renderBidList();
   renderSummary(budgetSummary);
   renderCharts(budgetSummary);
+  renderSettingsPanel(budgetSummary);
   renderTable(budgetSummary.classifiedItems);
   renderAbcList(budgetSummary.classifiedItems);
   renderAlerts(budgetSummary);
@@ -1027,21 +2276,68 @@ function render() {
   renderReports(budgetSummary);
 }
 
+function isWorkspacePage(page) {
+  return ["licitacao", "orcamento", "bdi", "analise", "relatorios", "composicoes"].includes(page);
+}
+
 function setActiveNav(hash) {
   const targetHash = hash || "#dashboard";
+  const targetPage = targetHash.replace("#", "") || "dashboard";
+  const mainHash = isWorkspacePage(targetPage) ? "#licitacoes" : targetHash;
 
   navItems.forEach((item) => {
-    const isActive = item.getAttribute("href") === targetHash;
+    const isActive = item.getAttribute("href") === mainHash;
     item.classList.toggle("active", isActive);
 
     if (isActive) item.setAttribute("aria-current", "page");
     else item.removeAttribute("aria-current");
+  });
+
+  workspaceLinks.forEach((link) => {
+    const isActive = link.getAttribute("href") === targetHash;
+    link.classList.toggle("active", isActive);
+    if (isActive) link.setAttribute("aria-current", "page");
+    else link.removeAttribute("aria-current");
   });
 }
 
 function showPage(hash = "#dashboard", updateHash = true) {
   const targetHash = hash || "#dashboard";
   const page = targetHash.replace("#", "") || "dashboard";
+
+  if (page === "conta") {
+    if (appShell) appShell.hidden = true;
+    if (authScreen) authScreen.hidden = false;
+    if (workspaceNav) workspaceNav.hidden = true;
+    renderAuthState();
+    setActiveNav("#conta");
+
+    if (updateHash && window.location.hash !== "#conta") {
+      window.history.pushState(null, "", "#conta");
+    }
+
+    window.scrollTo({ top: 0, behavior: "smooth" });
+    return;
+  }
+
+  if (!hasAuthenticatedSession()) {
+    if (appShell) appShell.hidden = true;
+    if (authScreen) authScreen.hidden = false;
+    if (workspaceNav) workspaceNav.hidden = true;
+    setAuthMode("signin");
+    renderAuthState();
+
+    if (updateHash && window.location.hash !== "#conta") {
+      window.history.pushState(null, "", "#conta");
+    }
+
+    window.scrollTo({ top: 0, behavior: "smooth" });
+    return;
+  }
+
+  if (appShell) appShell.hidden = false;
+  if (authScreen) authScreen.hidden = true;
+
   const hasPage = Array.from(pageSections).some((section) => section.dataset.page === page);
   const finalPage = hasPage ? page : "dashboard";
   const finalHash = `#${finalPage}`;
@@ -1050,6 +2346,7 @@ function showPage(hash = "#dashboard", updateHash = true) {
     section.hidden = section.dataset.page !== finalPage;
   });
 
+  if (workspaceNav) workspaceNav.hidden = !isWorkspacePage(finalPage);
   setActiveNav(finalHash);
 
   if (updateHash && window.location.hash !== finalHash) {
@@ -1255,6 +2552,14 @@ function deleteBudget(id) {
   render();
   saveState();
   showToast("Licitação excluída.");
+}
+
+function resetOutOfBdiTaxes() {
+  activeBdi().otherTaxes = 0;
+  hydrateForm();
+  render();
+  saveState();
+  showToast("IRPJ/CSLL retirados do BDI da proposta.");
 }
 
 function csvCell(value) {
@@ -1518,6 +2823,13 @@ function buildProposalDocument() {
     ["Tributos totais - I", toPercent(bdiBreakdown.taxPercent)],
     ["BDI final", toPercent(bdiBreakdown.totalPercent)],
   ];
+  const marketPracticeRows = [
+    ["ISS", "Entra no BDI"],
+    ["PIS/COFINS", "Entra no BDI"],
+    ["CPRB", "Entra se aplicável"],
+    ["IRPJ", "Fora do BDI"],
+    ["CSLL", "Fora do BDI"],
+  ];
 
   return `
     <div class="proposal-page">
@@ -1593,6 +2905,11 @@ function buildProposalDocument() {
         <table>
           <thead><tr><th>Parâmetro</th><th>Percentual</th></tr></thead>
           <tbody>${proposalRows(bdiRows)}</tbody>
+        </table>
+        <p class="proposal-note">IRPJ e CSLL ficam fora do BDI da proposta. Usar apenas tributos indiretos sobre receita.</p>
+        <table>
+          <thead><tr><th>Item</th><th>Prática comum</th></tr></thead>
+          <tbody>${proposalRows(marketPracticeRows)}</tbody>
         </table>
       </section>
 
@@ -1819,14 +3136,24 @@ function resetDemo() {
   saveState(true);
 }
 
+function syncBidInputs(field, value, sourceInput = null) {
+  bidInputs.forEach((input) => {
+    if (input === sourceInput || input.dataset.bid !== field) return;
+    input.value = value;
+  });
+}
+
 bidInputs.forEach((input) => {
   input.addEventListener("input", (event) => {
-    activeBid()[event.target.dataset.bid] = event.target.value;
+    const field = event.target.dataset.bid;
+    activeBid()[field] = event.target.value;
+    syncBidInputs(field, event.target.value, event.target);
     renderBidMeta();
     renderPipeline();
     renderBidFilters();
     renderBidList();
     renderReports(calculateBudget());
+    renderSettingsPanel();
     scheduleSave();
   });
 });
@@ -1836,6 +3163,17 @@ navItems.forEach((item) => {
     event.preventDefault();
     showPage(item.getAttribute("href"));
   });
+});
+
+workspaceLinks.forEach((item) => {
+  item.addEventListener("click", (event) => {
+    event.preventDefault();
+    showPage(item.getAttribute("href"));
+  });
+});
+
+authTabs.forEach((tab) => {
+  tab.addEventListener("click", () => setAuthMode(tab.dataset.authMode));
 });
 
 window.addEventListener("hashchange", () => showPage(window.location.hash, false));
@@ -1853,7 +3191,10 @@ bidsList.addEventListener("click", (event) => {
   const duplicateButton = event.target.closest("[data-duplicate-budget]");
   const deleteButton = event.target.closest("[data-delete-budget]");
 
-  if (selectButton) selectBudget(selectButton.dataset.selectBudget);
+  if (selectButton) {
+    selectBudget(selectButton.dataset.selectBudget);
+    showPage("#orcamento");
+  }
   if (duplicateButton) duplicateBudget(duplicateButton.dataset.duplicateBudget);
   if (deleteButton) deleteBudget(deleteButton.dataset.deleteBudget);
 });
@@ -1875,6 +3216,14 @@ bidFilters.addEventListener("click", (event) => {
   const button = event.target.closest("[data-filter-status]");
   if (!button) return;
   applyBidStatusFilter(button.dataset.filterStatus);
+});
+
+dashboardRecentList?.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-dashboard-open-budget]");
+  if (!button) return;
+
+  selectBudget(button.dataset.dashboardOpenBudget);
+  showPage("#orcamento");
 });
 
 itemsBody.addEventListener("input", (event) => {
@@ -1929,6 +3278,7 @@ compositionList.addEventListener("click", (event) => {
 newBudgetButtons.forEach((button) => button.addEventListener("click", createBudget));
 addItemButton.addEventListener("click", addItem);
 addCompositionButton.addEventListener("click", addComposition);
+resetTaxBdiButton?.addEventListener("click", resetOutOfBdiTaxes);
 downloadCsvTemplateButton.addEventListener("click", downloadCsvTemplate);
 importCsvButton.addEventListener("click", () => csvFileInput.click());
 csvFileInput.addEventListener("change", (event) => importCsvFile(event.target.files[0]));
@@ -1945,6 +3295,31 @@ saveSecondaryButton.addEventListener("click", () => saveState(true));
 installAppButton.addEventListener("click", installApp);
 installAppSecondaryButton.addEventListener("click", installApp);
 refreshAppButton.addEventListener("click", refreshAppCache);
+saveCloudConfigButton?.addEventListener("click", () => saveCloudConfig(true));
+testCloudConnectionButton?.addEventListener("click", testCloudConnection);
+createCloudWorkspaceButton?.addEventListener("click", createCloudWorkspace);
+syncActiveCloudButton?.addEventListener("click", syncActiveBudgetToCloud);
+syncAllCloudButton?.addEventListener("click", syncAllDataToCloud);
+loadCloudDataButton?.addEventListener("click", loadDataFromCloud);
+signInCloudButton?.addEventListener("click", signInCloudAccount);
+signUpCloudButton?.addEventListener("click", signUpCloudAccount);
+resendAuthEmailButton?.addEventListener("click", resendAuthConfirmationEmail);
+requestPasswordCloudButton?.addEventListener("click", requestPasswordRecoveryEmail);
+updatePasswordCloudButton?.addEventListener("click", updateCloudPassword);
+signOutCloudButton?.addEventListener("click", requestSignOutConfirmation);
+settingsChangePasswordButton?.addEventListener("click", openPasswordRecoveryFromSettings);
+settingsSignOutButton?.addEventListener("click", requestSignOutConfirmation);
+cancelLogoutButton?.addEventListener("click", closeLogoutConfirmation);
+confirmLogoutButton?.addEventListener("click", async () => {
+  closeLogoutConfirmation();
+  await signOutCloudAccount();
+});
+logoutConfirmation?.addEventListener("click", (event) => {
+  if (event.target === logoutConfirmation) closeLogoutConfirmation();
+});
+window.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && logoutConfirmation && !logoutConfirmation.hidden) closeLogoutConfirmation();
+});
 reportList.addEventListener("click", (event) => {
   const button = event.target.closest("[data-report-action]");
   if (!button) return;
@@ -1962,6 +3337,10 @@ window.addEventListener("afterprint", () => {
   proposalPrint.hidden = true;
 });
 
+setAuthMode("signin");
+renderCloudConfig();
+captureAuthRedirectSession();
+renderAuthState();
 hydrateForm();
 render();
 setupSectionObserver();

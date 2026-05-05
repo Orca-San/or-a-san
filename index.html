@@ -11,10 +11,81 @@
     />
     <link rel="manifest" href="manifest.webmanifest" />
     <link rel="icon" href="icons/orcasan-icon.svg" type="image/svg+xml" />
-    <link rel="apple-touch-icon" href="icons/orcasan-icon.svg" />
+    <link rel="apple-touch-icon" href="icons/orcasan-icon-192.png" />
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
+    <section class="auth-screen" id="auth-screen" hidden>
+      <div class="auth-frame">
+        <aside class="auth-showcase" aria-label="OrçaSan">
+          <div class="auth-showcase-brand">
+            <div class="brand-mark" aria-hidden="true">OS</div>
+            <div>
+              <strong>OrçaSan</strong>
+              <span>Licitações de saneamento</span>
+            </div>
+          </div>
+          <div class="auth-showcase-copy">
+            <p class="eyebrow">OrçaSan</p>
+            <h2>Controle seus orçamentos de licitações de saneamento em um só lugar.</h2>
+            <p>Monte BDI, organize custos e gere propostas prontas para envio em minutos.</p>
+          </div>
+
+          <ul class="auth-benefits" aria-label="Benefícios do OrçaSan">
+            <li>Centralize editais e orçamentos</li>
+            <li>Calcule BDI com segurança</li>
+            <li>Gere proposta pronta para envio</li>
+          </ul>
+        </aside>
+
+        <div class="auth-card">
+        <div class="auth-copy">
+          <h1 id="auth-title">Acessar conta</h1>
+        </div>
+
+        <span class="cloud-status auth-message" id="auth-status"></span>
+
+        <div class="auth-form">
+          <label data-auth-signup>
+            Nome
+            <input id="auth-name" type="text" autocomplete="name" placeholder="Seu nome" />
+          </label>
+          <label data-auth-signup>
+            Empresa
+            <input id="auth-company" type="text" autocomplete="organization" placeholder="Nome da empresa" />
+          </label>
+          <label data-auth-email>
+            E-mail
+            <input id="auth-email" type="email" autocomplete="email" placeholder="voce@empresa.com.br" />
+          </label>
+          <label data-auth-password>
+            Senha
+            <input id="auth-password" type="password" autocomplete="current-password" minlength="6" placeholder="Digite sua senha" />
+          </label>
+        </div>
+
+        <div class="auth-actions">
+          <button class="primary-button" id="sign-in-cloud" type="button">Entrar <span aria-hidden="true">→</span></button>
+          <button class="primary-button" id="sign-up-cloud" type="button" hidden>Criar conta</button>
+          <button class="primary-button" id="request-password-cloud" type="button" hidden>Enviar recuperação</button>
+          <button class="primary-button" id="update-password-cloud" type="button" hidden>Salvar nova senha</button>
+          <button class="ghost-button" id="resend-auth-email" type="button" hidden>Reenviar confirmação</button>
+          <button class="ghost-button" id="sign-out-cloud" type="button" hidden>Sair</button>
+        </div>
+
+        <p class="auth-trust">Seus dados são protegidos e armazenados com segurança.</p>
+
+        <div class="auth-links" aria-label="Ações de conta">
+          <button class="auth-link" data-auth-mode="signup" data-auth-entry-link type="button">Criar conta</button>
+          <button class="auth-link" data-auth-mode="recover" data-auth-entry-link type="button">Esqueci minha senha</button>
+          <button class="auth-link" data-auth-mode="signin" data-auth-return type="button" hidden>Voltar para entrar</button>
+        </div>
+
+        <a class="auth-back" id="auth-back-app" href="#dashboard" hidden>Voltar ao app</a>
+        </div>
+      </div>
+    </section>
+
     <div class="app-shell">
       <aside class="sidebar" aria-label="Navegação principal">
         <div class="brand">
@@ -34,34 +105,6 @@
             <span aria-hidden="true">▥</span>
             Licitações
           </a>
-          <a class="nav-item" href="#licitacao">
-            <span aria-hidden="true">◎</span>
-            Licitação
-          </a>
-          <a class="nav-item" href="#orcamento">
-            <span aria-hidden="true">▤</span>
-            Planilha
-          </a>
-          <a class="nav-item" href="#bdi">
-            <span aria-hidden="true">%</span>
-            BDI
-          </a>
-          <a class="nav-item" href="#analise">
-            <span aria-hidden="true">◫</span>
-            Análise
-          </a>
-          <a class="nav-item" href="#composicoes">
-            <span aria-hidden="true">▧</span>
-            Composições
-          </a>
-          <a class="nav-item" href="#relatorios">
-            <span aria-hidden="true">□</span>
-            Relatórios
-          </a>
-          <a class="nav-item" href="#configuracoes">
-            <span aria-hidden="true">⚙</span>
-            Configurações
-          </a>
         </nav>
 
         <div class="side-card">
@@ -69,47 +112,94 @@
           <strong id="next-opening-date">14/05/2026</strong>
           <p id="next-opening-summary">Concorrência 012/2026 - Rede coletora de esgoto</p>
         </div>
+
+        <div class="sidebar-utility" aria-label="Acesso auxiliar">
+          <a href="#configuracoes">Configurações</a>
+          <a href="#conta">Conta</a>
+        </div>
       </aside>
 
       <main class="main-content">
         <header class="topbar">
           <div>
-            <p class="eyebrow">MVP editável</p>
-            <h1>Orçamento de licitação</h1>
+            <p class="eyebrow">Sistema de orçamento</p>
+            <h1>OrçaSan</h1>
             <p class="save-status" id="save-status">Salvo no navegador</p>
           </div>
           <div class="topbar-actions">
             <button class="ghost-button" data-new-budget type="button">Nova licitação</button>
-            <button class="ghost-button" id="reset-demo" type="button">Restaurar exemplo</button>
-            <button class="ghost-button" id="export-csv" type="button">Exportar CSV</button>
-            <button class="ghost-button" id="export-xls" type="button">Gerar planilha</button>
-            <button class="ghost-button" id="export-backup" type="button">Backup JSON</button>
-            <button class="ghost-button" id="install-app" type="button" hidden>Instalar app</button>
-            <button class="ghost-button" id="save-data" type="button">Salvar local</button>
+            <button class="ghost-button" id="save-data" type="button">Salvar</button>
             <button class="primary-button" id="print-proposal" type="button">Gerar proposta</button>
           </div>
         </header>
 
-        <section class="summary-grid page-section" id="dashboard" data-page="dashboard" aria-label="Resumo do orçamento">
+        <nav class="workspace-nav" id="workspace-nav" aria-label="Fluxo da licitação ativa" hidden>
+          <a href="#licitacao" data-workspace-link>Dados</a>
+          <a href="#orcamento" data-workspace-link>Orçamento</a>
+          <a href="#bdi" data-workspace-link>BDI</a>
+          <a href="#analise" data-workspace-link>Análise</a>
+          <a href="#relatorios" data-workspace-link>Relatórios</a>
+          <a href="#composicoes" data-workspace-link>Composições</a>
+        </nav>
+
+        <section class="dashboard-hero page-section" data-page="dashboard" aria-label="Início do OrçaSan">
+          <div>
+            <p class="eyebrow">Visão geral</p>
+            <h2>Crie, acompanhe e finalize propostas de saneamento.</h2>
+            <p>Fluxo recomendado: criar licitação, preencher dados do edital, montar orçamento, revisar BDI e gerar proposta.</p>
+          </div>
+          <button class="primary-button" data-new-budget type="button">+ Nova licitação</button>
+        </section>
+
+        <section class="summary-grid page-section" data-page="dashboard" aria-label="Resumo da carteira">
           <article class="metric">
-            <span>Valor sem BDI</span>
-            <strong id="metric-base">R$ 0,00</strong>
-            <small>Custo direto estimado</small>
+            <span>Total de licitações</span>
+            <strong id="metric-bids-total">0</strong>
+            <small>Carteira cadastrada</small>
           </article>
           <article class="metric">
-            <span>Valor com BDI</span>
-            <strong id="metric-total">R$ 0,00</strong>
-            <small>Proposta preliminar</small>
+            <span>Valor total</span>
+            <strong id="metric-portfolio-total">R$ 0,00</strong>
+            <small>Soma das propostas com BDI</small>
           </article>
           <article class="metric">
-            <span>BDI aplicado</span>
-            <strong id="metric-bdi">0,00%</strong>
-            <small>Percentual final calculado</small>
+            <span>Em andamento</span>
+            <strong id="metric-in-progress">0</strong>
+            <small>Orçamento ou revisão</small>
           </article>
           <article class="metric">
-            <span>Itens críticos</span>
-            <strong id="metric-critical">0</strong>
-            <small>Classe A da curva ABC</small>
+            <span>Finalizadas</span>
+            <strong id="metric-finished">0</strong>
+            <small>Enviadas, vencidas ou perdidas</small>
+          </article>
+        </section>
+
+        <section class="dashboard-grid page-section" data-page="dashboard" aria-label="Licitações recentes">
+          <article class="panel dashboard-recent-panel">
+            <div class="panel-header">
+              <div>
+                <p class="eyebrow">Atividade recente</p>
+                <h2>Licitações recentes</h2>
+              </div>
+              <a class="ghost-button compact" href="#licitacoes">Ver carteira</a>
+            </div>
+            <div class="dashboard-recent-list" id="dashboard-recent-list"></div>
+          </article>
+
+          <article class="panel dashboard-flow-panel">
+            <div class="panel-header">
+              <div>
+                <p class="eyebrow">Fluxo recomendado</p>
+                <h2>Criar → orçar → revisar → gerar</h2>
+              </div>
+            </div>
+            <div class="flow-steps">
+              <a href="#licitacao"><span>1</span><strong>Dados</strong><small>Edital e prazos</small></a>
+              <a href="#orcamento"><span>2</span><strong>Orçamento</strong><small>Itens e custos</small></a>
+              <a href="#bdi"><span>3</span><strong>BDI</strong><small>Memória de cálculo</small></a>
+              <a href="#analise"><span>4</span><strong>Revisão</strong><small>Curva ABC</small></a>
+              <a href="#relatorios"><span>5</span><strong>Proposta</strong><small>Saídas finais</small></a>
+            </div>
           </article>
         </section>
 
@@ -281,7 +371,51 @@
             <div class="formula-card">
               <strong>Fórmula usada</strong>
               <span>BDI = [((1 + AC + S + G + R) × (1 + DF) × (1 + L)) ÷ (1 - I) - 1] × 100</span>
-              <small>AC: administração central, S: seguros, G: garantias, R: risco, DF: despesas financeiras, L: lucro, I: tributos.</small>
+              <small>AC: administração central, S: seguros, G: garantias, R: risco, DF: despesas financeiras, L: lucro, I: tributos sobre receita. IRPJ e CSLL ficam fora do BDI da proposta.</small>
+            </div>
+
+            <div class="bdi-guidance-grid">
+              <div class="bdi-practice-card">
+                <h3>O que o mercado faz</h3>
+                <div class="practice-table-wrap">
+                  <table class="practice-table">
+                    <thead>
+                      <tr>
+                        <th>Item</th>
+                        <th>Prática comum</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td>ISS</td>
+                        <td><span class="market-ok">Entra no BDI</span></td>
+                      </tr>
+                      <tr>
+                        <td>PIS/COFINS</td>
+                        <td><span class="market-ok">Entra no BDI</span></td>
+                      </tr>
+                      <tr>
+                        <td>CPRB</td>
+                        <td><span class="market-warn">Entra se aplicável</span></td>
+                      </tr>
+                      <tr>
+                        <td>IRPJ</td>
+                        <td><span class="market-out">Fora do BDI</span></td>
+                      </tr>
+                      <tr>
+                        <td>CSLL</td>
+                        <td><span class="market-out">Fora do BDI</span></td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+              <div class="bdi-conclusion-card">
+                <h3>Conclusão direta</h3>
+                <p>Para diretoria e proposta, retire IRPJ e CSLL do BDI.</p>
+                <p>O BDI da proposta considera ISS, PIS/COFINS e CPRB somente quando aplicável.</p>
+                <button class="ghost-button compact" id="reset-tax-bdi" type="button">Zerar tributos fora do BDI</button>
+              </div>
             </div>
 
             <div class="bdi-list" aria-label="Composição do BDI">
@@ -337,10 +471,14 @@
                   <span class="field-help">Usar quando aplicável ao regime tributário e enquadramento da obra.</span>
                 </label>
                 <label>
-                  Outros tributos
-                  <input class="bdi-input" data-bdi="otherTaxes" type="number" min="0" step="0.01" value="2.00" />
-                  <span class="field-help">Ajustes tributários específicos do edital ou da empresa.</span>
+                  Outros tributos indiretos
+                  <input class="bdi-input" data-bdi="otherTaxes" type="number" min="0" step="0.01" value="0.00" />
+                  <span class="field-help">Use apenas tributos indiretos previstos no edital. Não incluir IRPJ nem CSLL.</span>
                 </label>
+                <div class="out-of-bdi-note">
+                  <strong>Fora do BDI da proposta</strong>
+                  <span>IRPJ e CSLL são tributos sobre resultado/lucro. Não entram no modelo comum de BDI para proposta.</span>
+                </div>
               </div>
             </div>
           </article>
@@ -350,7 +488,7 @@
           <div class="panel-header">
             <div>
               <p class="eyebrow">Itens da proposta</p>
-              <h2>Planilha orçamentária editável</h2>
+              <h2>Orçamento da licitação</h2>
             </div>
             <div class="panel-actions">
               <button class="ghost-button compact" id="download-csv-template" type="button">Modelo CSV</button>
@@ -429,58 +567,164 @@
           </article>
         </section>
 
-        <section class="panel settings-panel page-section" id="configuracoes" data-page="configuracoes" hidden>
-          <div class="panel-header">
+        <section class="settings-panel page-section" id="configuracoes" data-page="configuracoes" hidden>
+          <div class="settings-hero">
             <div>
-              <p class="eyebrow">Portabilidade</p>
-              <h2>Usar em outra máquina</h2>
+              <p class="eyebrow">Configurações</p>
+              <h2>Preferências da conta e da empresa</h2>
+              <p>Organize os dados usados nas propostas, defina padrões e acesse suas exportações.</p>
             </div>
+            <button class="primary-button" id="save-data-secondary" type="button">Salvar alterações</button>
           </div>
-          <div class="settings-grid">
-            <div class="setting-row">
-              <strong>Salvar local</strong>
-              <span>Grava os dados no navegador desta máquina. O OrçaSan também salva automaticamente enquanto você edita.</span>
-              <button class="ghost-button compact" id="save-data-secondary" type="button">Salvar local</button>
-            </div>
-            <div class="setting-row">
-              <strong>Exportar backup completo</strong>
-              <span>Baixa um arquivo JSON com tudo que foi criado. Use para levar dados para outra máquina ou guardar uma cópia.</span>
-              <button class="ghost-button compact" id="export-backup-secondary" type="button">Exportar backup JSON</button>
-            </div>
-            <div class="setting-row">
-              <strong>Importar backup</strong>
-              <span>Carrega um backup do OrçaSan gerado em outro computador.</span>
-              <button class="ghost-button compact" id="import-backup" type="button">Importar backup</button>
+
+          <div class="settings-layout">
+            <article class="settings-card settings-card-large">
+              <div class="settings-card-header">
+                <div>
+                  <p class="eyebrow">Dados da empresa</p>
+                  <h3>Identificação nas propostas</h3>
+                </div>
+                <span>Licitação ativa</span>
+              </div>
+              <div class="settings-form">
+                <label>
+                  Nome da empresa
+                  <input data-bid="company" autocomplete="organization" />
+                </label>
+                <label>
+                  CNPJ
+                  <input data-bid="companyDocument" inputmode="numeric" />
+                </label>
+                <label>
+                  Responsável técnico
+                  <input data-bid="technicalOwner" autocomplete="name" />
+                </label>
+                <label>
+                  CREA
+                  <input data-bid="technicalRegistry" />
+                </label>
+              </div>
+            </article>
+
+            <article class="settings-card">
+              <div class="settings-card-header">
+                <div>
+                  <p class="eyebrow">Preferências</p>
+                  <h3>Padrões da proposta</h3>
+                </div>
+              </div>
+              <div class="settings-form compact-form">
+                <label>
+                  Validade padrão da proposta
+                  <input data-bid="validityDays" type="number" min="1" />
+                </label>
+                <label>
+                  Prazo padrão de execução
+                  <input data-bid="executionDays" type="number" min="1" />
+                </label>
+              </div>
+              <div class="settings-inline-summary">
+                <span>BDI atual</span>
+                <strong id="settings-bdi-percent">0,00%</strong>
+                <a class="ghost-button compact" href="#bdi">Ajustar BDI</a>
+              </div>
+            </article>
+
+            <article class="settings-card">
+              <div class="settings-card-header">
+                <div>
+                  <p class="eyebrow">Exportações</p>
+                  <h3>Arquivos e cópias</h3>
+                </div>
+              </div>
+              <div class="settings-actions-list">
+                <button class="ghost-button compact" id="export-csv" type="button">Exportar CSV</button>
+                <button class="ghost-button compact" id="export-xls" type="button">Gerar planilha</button>
+                <button class="ghost-button compact" id="export-backup" type="button">Exportar backup</button>
+              </div>
+              <p class="settings-note">Use as exportações para conferência, envio interno ou cópia de segurança.</p>
+            </article>
+
+            <article class="settings-card">
+              <div class="settings-card-header">
+                <div>
+                  <p class="eyebrow">Conta</p>
+                  <h3>Acesso do usuário</h3>
+                </div>
+              </div>
+              <div class="account-summary">
+                <span>E-mail</span>
+                <strong id="settings-user-email">Conta não conectada</strong>
+              </div>
+              <div class="settings-actions-list">
+                <button class="ghost-button compact" id="settings-change-password" type="button">Alterar senha</button>
+                <button class="ghost-button compact danger-button" id="settings-sign-out" type="button">Sair da conta</button>
+              </div>
+            </article>
+
+            <article class="settings-card settings-card-large settings-internal-tools" hidden>
+              <div class="settings-card-header">
+                <div>
+                  <p class="eyebrow">Ferramentas internas</p>
+                  <h3>Manutenção do aplicativo</h3>
+                </div>
+              </div>
+              <div class="settings-actions-list">
+                <button class="ghost-button compact" id="reset-demo" type="button">Restaurar exemplo</button>
+                <button class="ghost-button compact" id="export-backup-secondary" type="button" hidden>Exportar backup JSON</button>
+                <button class="ghost-button compact" id="import-backup" type="button">Importar backup</button>
+                <button class="ghost-button compact" id="install-app" type="button" hidden>Instalar app</button>
+                <button class="ghost-button compact" id="install-app-secondary" type="button">Instalar aplicativo</button>
+                <button class="ghost-button compact" id="refresh-app" type="button">Atualizar app</button>
+              </div>
+              <span id="install-status" hidden>Quando disponível, instale o OrçaSan para abrir em janela própria com ícone.</span>
               <input id="backup-file" type="file" accept="application/json,.json" hidden />
-            </div>
-            <div class="setting-row">
-              <strong>Versão SaaS</strong>
-              <span>Próxima fase: login, banco de dados, hospedagem e acesso por link.</span>
-              <button class="ghost-button compact" data-new-budget type="button">Criar nova proposta</button>
-            </div>
-            <div class="setting-row">
-              <strong>Aplicativo instalável</strong>
-              <span id="install-status">Quando disponível, instale o OrçaSan para abrir em janela própria com ícone.</span>
-              <button class="ghost-button compact" id="install-app-secondary" type="button">Instalar aplicativo</button>
-            </div>
-            <div class="setting-row">
-              <strong>Atualizar aplicativo</strong>
-              <span>Limpa o cache local e recarrega os arquivos mais recentes do OrçaSan.</span>
-              <button class="ghost-button compact" id="refresh-app" type="button">Atualizar app</button>
-            </div>
-            <div class="setting-row wide-setting">
-              <strong>Como alguém instala</strong>
-              <span>
-                Publique o OrçaSan em um link HTTPS. A pessoa acessa o link, clica em Instalar app ou usa o ícone de instalação do navegador.
-                Depois ele aparece no menu iniciar/área de trabalho como aplicativo.
-              </span>
-            </div>
+            </article>
+
+            <article class="settings-card settings-card-large cloud-setting technical-panel-hidden" id="cloud-technical-panel" hidden aria-hidden="true">
+              <div class="settings-card-header">
+                <div>
+                  <p class="eyebrow">Modo desenvolvedor</p>
+                  <h3>Integração Supabase</h3>
+                </div>
+              </div>
+              <span class="cloud-status" id="cloud-status">Conexão ainda não configurada.</span>
+              <div class="setting-form">
+                <label>
+                  API URL
+                  <input id="cloud-api-url" type="url" spellcheck="false" />
+                </label>
+                <label>
+                  Publishable key
+                  <input id="cloud-publishable-key" type="text" autocomplete="off" spellcheck="false" placeholder="sb_publishable_..." />
+                </label>
+              </div>
+              <div class="button-row cloud-actions">
+                <button class="ghost-button compact" id="save-cloud-config" type="button">Salvar conexão</button>
+                <button class="ghost-button compact" id="test-cloud-connection" type="button">Testar conexão</button>
+                <button class="ghost-button compact" id="create-cloud-workspace" type="button">Criar workspace</button>
+                <button class="primary-button compact" id="sync-active-cloud" type="button">Enviar licitação atual</button>
+                <button class="ghost-button compact" id="sync-all-cloud" type="button">Enviar tudo</button>
+                <button class="ghost-button compact" id="load-cloud-data" type="button">Carregar da nuvem</button>
+              </div>
+            </article>
           </div>
         </section>
       </main>
     </div>
 
     <section class="proposal-print" id="proposal-print" hidden></section>
+    <div class="confirm-overlay" id="logout-confirmation" role="dialog" aria-modal="true" aria-labelledby="logout-confirmation-title" hidden>
+      <div class="confirm-dialog">
+        <p class="eyebrow">Conta</p>
+        <h2 id="logout-confirmation-title">Deseja realmente sair da sua conta?</h2>
+        <p>Você poderá entrar novamente usando seu e-mail e senha.</p>
+        <div class="button-row">
+          <button class="ghost-button" id="cancel-logout" type="button">Cancelar</button>
+          <button class="primary-button" id="confirm-logout" type="button">Sair</button>
+        </div>
+      </div>
+    </div>
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
     <script src="app.js"></script>
   </body>
