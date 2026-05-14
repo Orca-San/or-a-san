@@ -1180,7 +1180,7 @@ async function signUpCloudAccount() {
     setAuthStatus("Conta criada com sucesso.", "success");
     showToast("Conta criada e conectada.");
     showPage("#dashboard");
-    syncActiveBudgetToCloud({ silent: true });
+    syncAllDataToCloud({ silent: true });
     return response;
   });
 }
@@ -1205,7 +1205,7 @@ async function signInCloudAccount() {
     setAuthStatus("Acesso confirmado.", "success");
     showToast("Conta conectada.");
     showPage("#dashboard");
-    syncActiveBudgetToCloud({ silent: true });
+    syncAllDataToCloud({ silent: true });
     return response;
   });
 }
@@ -1584,18 +1584,51 @@ async function syncActiveBudgetToCloud(options = {}) {
   }
 }
 
-async function syncAllDataToCloud() {
-  return runCloudAction("Enviando carteira completa para a nuvem...", "Carteira enviada para a nuvem.", async () => {
-    const organization = await ensureCloudOrganization();
+async function persistAllDataToCloud() {
+  const organization = await ensureCloudOrganization();
 
-    for (const budget of state.budgets) {
-      await saveBudgetToCloud(budget, organization);
+  for (const budget of state.budgets) {
+    await saveBudgetToCloud(budget, organization);
+  }
+
+  await replaceCloudCompositions(organization.id);
+  saveState(false, { syncCloud: false });
+  render();
+
+  return {
+    organization,
+    budgetCount: state.budgets.length,
+  };
+}
+
+async function syncAllDataToCloud(options = {}) {
+  const { silent = false } = options;
+
+  if (silent && !hasAuthenticatedSession()) return null;
+  if (isCloudSyncing) return null;
+
+  window.clearTimeout(cloudAutoSyncTimer);
+  isCloudSyncing = true;
+
+  if (silent) {
+    try {
+      const result = await persistAllDataToCloud();
+      setCloudStatus(`${result.budgetCount} licitação(ões) sincronizada(s) com a nuvem.`, "success");
+      return result;
+    } catch (error) {
+      console.error(error);
+      setCloudStatus(supabaseErrorMessage(error), "error");
+      return null;
+    } finally {
+      isCloudSyncing = false;
     }
+  }
 
-    await replaceCloudCompositions(organization.id);
-    saveState(false, { syncCloud: false });
-    render();
-  });
+  try {
+    return await runCloudAction("Enviando carteira completa para a nuvem...", "Carteira enviada para a nuvem.", persistAllDataToCloud);
+  } finally {
+    isCloudSyncing = false;
+  }
 }
 
 async function findCloudOrganization() {
@@ -1735,7 +1768,7 @@ async function loadDataFromCloud() {
 
     hydrateForm();
     render();
-    saveState();
+    saveState(false, { syncCloud: false });
   });
 }
 
