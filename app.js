@@ -1,4 +1,4 @@
-const STORAGE_KEY = "orcasan.workspace.v2";
+﻿const STORAGE_KEY = "orcasan.workspace.v2";
 const LEGACY_STORAGE_KEY = "orcasan.current-budget.v1";
 const CLOUD_CONFIG_KEY = "orcasan.cloud-config.v1";
 const CLOUD_SESSION_KEY = "orcasan.cloud-session.v1";
@@ -8,22 +8,22 @@ const DEFAULT_CLOUD_PUBLISHABLE_KEY = "sb_publishable_qr_f9x2Os79RHQG0XhX_4Q_1uh
 const PUBLIC_APP_URL = "https://orcasan.vercel.app/";
 const REQUIRED_IMPORT_COLUMNS = ["description", "unit", "quantity", "unitPrice"];
 const IMPORT_COLUMN_ALIASES = {
-  description: ["descrição", "descricao", "serviço", "servico", "item", "objeto"],
+  description: ["descriÃ§Ã£o", "descricao", "serviÃ§o", "servico", "item", "objeto"],
   unit: ["unidade", "un", "und"],
   quantity: ["quantidade", "qtd", "qtde"],
   unitPrice: [
     "preco_unitario",
-    "preço unitário",
+    "preÃ§o unitÃ¡rio",
     "preco unitario",
-    "valor unitário",
+    "valor unitÃ¡rio",
     "valor unitario",
-    "preço",
+    "preÃ§o",
     "preco",
     "valor",
-    "preço unitário sem bdi",
+    "preÃ§o unitÃ¡rio sem bdi",
     "preco unitario sem bdi",
   ],
-  code: ["codigo", "código", "cod", "item", "ref", "referência", "referencia"],
+  code: ["codigo", "cÃ³digo", "cod", "item", "ref", "referÃªncia", "referencia"],
   stage: ["etapa", "categoria", "grupo", "fase"],
 };
 
@@ -31,17 +31,17 @@ function defaultBid() {
   return {
     company: "Construtora Exemplo Saneamento Ltda.",
     companyDocument: "12.345.678/0001-90",
-    title: "Implantação de rede coletora de esgoto - Setor Norte",
-    agency: "Prefeitura Municipal de São Bento",
-    editalNumber: "Concorrência 012/2026",
-    location: "São Bento / SP",
+    title: "ImplantaÃ§Ã£o de rede coletora de esgoto - Setor Norte",
+    agency: "Prefeitura Municipal de SÃ£o Bento",
+    editalNumber: "ConcorrÃªncia 012/2026",
+    location: "SÃ£o Bento / SP",
     workType: "Rede coletora de esgoto",
     openingDate: "2026-05-14",
     executionDays: 180,
     validityDays: 60,
-    technicalOwner: "Eng. Responsável",
+    technicalOwner: "Eng. ResponsÃ¡vel",
     technicalRegistry: "CREA 0000000000",
-    status: "Em orçamento",
+    status: "Em orÃ§amento",
   };
 }
 
@@ -64,9 +64,9 @@ function defaultItems() {
   return [
     {
       id: "item-01",
-      stage: "Serviços preliminares",
+      stage: "ServiÃ§os preliminares",
       code: "01.01",
-      description: "Mobilização, instalação de canteiro e placa de obra",
+      description: "MobilizaÃ§Ã£o, instalaÃ§Ã£o de canteiro e placa de obra",
       unit: "vb",
       quantity: 1,
       unitPrice: 38500,
@@ -75,8 +75,8 @@ function defaultItems() {
       id: "item-02",
       stage: "Movimento de terra",
       code: "02.03",
-      description: "Escavação mecanizada de vala em solo de 1ª categoria",
-      unit: "m³",
+      description: "EscavaÃ§Ã£o mecanizada de vala em solo de 1Âª categoria",
+      unit: "mÂ³",
       quantity: 4280,
       unitPrice: 42.9,
     },
@@ -100,28 +100,28 @@ function defaultItems() {
     },
     {
       id: "item-05",
-      stage: "Poços de visita",
+      stage: "PoÃ§os de visita",
       code: "04.01",
-      description: "Poço de visita em concreto armado, profundidade até 2,00 m",
+      description: "PoÃ§o de visita em concreto armado, profundidade atÃ© 2,00 m",
       unit: "un",
       quantity: 36,
       unitPrice: 3120,
     },
     {
       id: "item-06",
-      stage: "Ligações",
+      stage: "LigaÃ§Ãµes",
       code: "05.02",
-      description: "Ligação domiciliar de esgoto com caixa de inspeção",
+      description: "LigaÃ§Ã£o domiciliar de esgoto com caixa de inspeÃ§Ã£o",
       unit: "un",
       quantity: 420,
       unitPrice: 468,
     },
     {
       id: "item-07",
-      stage: "Pavimentação",
+      stage: "PavimentaÃ§Ã£o",
       code: "06.04",
-      description: "Recomposição de pavimento asfáltico",
-      unit: "m²",
+      description: "RecomposiÃ§Ã£o de pavimento asfÃ¡ltico",
+      unit: "mÂ²",
       quantity: 1980,
       unitPrice: 88.6,
     },
@@ -136,23 +136,23 @@ function defaultCompositions() {
       title: "Assentamento de tubo PVC Ocre DN 200 mm",
       unit: "m",
       cost: 96.4,
-      note: "Inclui equipe, preparo de vala, regularização de berço e assentamento.",
+      note: "Inclui equipe, preparo de vala, regularizaÃ§Ã£o de berÃ§o e assentamento.",
     },
     {
       id: "composition-02",
       code: "COMP-ESG-002",
-      title: "Poço de visita em concreto armado até 2,00 m",
+      title: "PoÃ§o de visita em concreto armado atÃ© 2,00 m",
       unit: "un",
       cost: 3120,
-      note: "Com forma, armação, concreto, tampa e acabamento interno.",
+      note: "Com forma, armaÃ§Ã£o, concreto, tampa e acabamento interno.",
     },
     {
       id: "composition-03",
       code: "COMP-PAV-001",
-      title: "Recomposição de pavimento asfáltico",
-      unit: "m²",
+      title: "RecomposiÃ§Ã£o de pavimento asfÃ¡ltico",
+      unit: "mÂ²",
       cost: 88.6,
-      note: "Base compactada, imprimação, CBUQ e acabamento de bordas.",
+      note: "Base compactada, imprimaÃ§Ã£o, CBUQ e acabamento de bordas.",
     },
   ];
 }
@@ -181,7 +181,7 @@ let bidStatusFilter = "Todas";
 let deferredInstallPrompt = null;
 let pendingBudgetImportItems = [];
 
-const BID_STATUSES = ["Em orçamento", "Em revisão", "Enviada", "Vencida", "Perdida"];
+const BID_STATUSES = ["Em orÃ§amento", "Em revisÃ£o", "Enviada", "Vencida", "Perdida"];
 
 const currencyFormatter = new Intl.NumberFormat("pt-BR", {
   style: "currency",
@@ -399,6 +399,10 @@ function loadState() {
   }
 }
 
+function hasPersistedWorkspaceData() {
+  return Boolean(window.localStorage.getItem(STORAGE_KEY) || window.localStorage.getItem(LEGACY_STORAGE_KEY));
+}
+
 function getActiveBudget() {
   let budget = state.budgets.find((candidate) => candidate.id === state.activeBudgetId);
 
@@ -431,14 +435,14 @@ function saveState(showFeedback = false, options = {}) {
     minute: "2-digit",
   }).format(new Date());
 
-  saveStatus.textContent = `Salvo no navegador às ${now}`;
-  if (showFeedback) showToast("Orçamento salvo.");
+  saveStatus.textContent = `Salvo no navegador Ã s ${now}`;
+  if (showFeedback) showToast("OrÃ§amento salvo.");
 
   if (options.syncCloud !== false) scheduleCloudAutoSync();
 }
 
 function scheduleSave() {
-  saveStatus.textContent = "Alterações pendentes...";
+  saveStatus.textContent = "AlteraÃ§Ãµes pendentes...";
   window.clearTimeout(saveTimer);
   saveTimer = window.setTimeout(() => saveState(), 300);
 }
@@ -464,10 +468,10 @@ function isLocalAppOrigin() {
 
 function installUnavailableMessage() {
   if (isLocalAppOrigin()) {
-    return `Este endereço é só de teste local. Para instalar sem depender do 127.0.0.1, abra ${PUBLIC_APP_URL} no Chrome e use o ícone de instalação.`;
+    return `Este endereÃ§o Ã© sÃ³ de teste local. Para instalar sem depender do 127.0.0.1, abra ${PUBLIC_APP_URL} no Chrome e use o Ã­cone de instalaÃ§Ã£o.`;
   }
 
-  return "Se o prompt não abrir, use o ícone de instalação do navegador ou verifique se o app já foi instalado.";
+  return "Se o prompt nÃ£o abrir, use o Ã­cone de instalaÃ§Ã£o do navegador ou verifique se o app jÃ¡ foi instalado.";
 }
 
 function updateInstallUi() {
@@ -479,14 +483,14 @@ function updateInstallUi() {
     installAppSecondaryButton.disabled = true;
     installStatus.textContent = isLocalAppOrigin()
       ? "Este atalho foi instalado a partir do 127.0.0.1 e depende do servidor local ligado. Para uso real, instale pelo link online em HTTPS."
-      : "O OrçaSan já está instalado como aplicativo neste dispositivo.";
+      : "O OrÃ§aSan jÃ¡ estÃ¡ instalado como aplicativo neste dispositivo.";
     return;
   }
 
   if (deferredInstallPrompt) {
     installAppButton.hidden = false;
     installAppSecondaryButton.disabled = false;
-    installStatus.textContent = "Instale o OrçaSan para abrir em janela própria, com ícone e atalho.";
+    installStatus.textContent = "Instale o OrÃ§aSan para abrir em janela prÃ³pria, com Ã­cone e atalho.";
     return;
   }
 
@@ -497,7 +501,7 @@ function updateInstallUi() {
 
 async function installApp() {
   if (!deferredInstallPrompt) {
-    showToast(isLocalAppOrigin() ? "Instale pelo link online HTTPS, não pelo 127.0.0.1." : "Use o ícone de instalação do navegador.");
+    showToast(isLocalAppOrigin() ? "Instale pelo link online HTTPS, nÃ£o pelo 127.0.0.1." : "Use o Ã­cone de instalaÃ§Ã£o do navegador.");
     if (installStatus) installStatus.textContent = installUnavailableMessage();
     updateInstallUi();
     return;
@@ -508,8 +512,8 @@ async function installApp() {
   deferredInstallPrompt = null;
   updateInstallUi();
 
-  if (result.outcome === "accepted") showToast("OrçaSan instalado.");
-  else showToast("Instalação cancelada.");
+  if (result.outcome === "accepted") showToast("OrÃ§aSan instalado.");
+  else showToast("InstalaÃ§Ã£o cancelada.");
 }
 
 function setupPwa() {
@@ -519,7 +523,7 @@ function setupPwa() {
         .register("./service-worker.js")
         .then((registration) => registration.update())
         .catch(() => {
-          showToast("Não foi possível ativar o modo offline.");
+          showToast("NÃ£o foi possÃ­vel ativar o modo offline.");
         });
     });
   }
@@ -554,7 +558,7 @@ async function refreshAppCache() {
     showToast("Cache limpo. Recarregando app...");
     window.setTimeout(() => window.location.reload(), 500);
   } catch {
-    showToast("Não foi possível limpar o cache automaticamente.");
+    showToast("NÃ£o foi possÃ­vel limpar o cache automaticamente.");
   }
 }
 
@@ -609,13 +613,13 @@ const AUTH_MODE_COPY = {
   recover: {
     title: "Recuperar senha",
     hint: "",
-    status: "Você receberá um link para trocar a senha.",
+    status: "VocÃª receberÃ¡ um link para trocar a senha.",
     panel: "",
   },
   reset: {
     title: "Nova senha",
     hint: "",
-    status: "Digite a nova senha recebida pelo fluxo de recuperação.",
+    status: "Digite a nova senha recebida pelo fluxo de recuperaÃ§Ã£o.",
     panel: "",
   },
 };
@@ -741,7 +745,7 @@ function captureAuthRedirectSession() {
   const session = sessionFromUrlHash();
   if (!session) return null;
 
-  setAuthStatus("E-mail confirmado. Finalizando sessão...", "success");
+  setAuthStatus("E-mail confirmado. Finalizando sessÃ£o...", "success");
   showToast("E-mail confirmado.");
   if (session.authType === "recovery") setAuthMode("reset");
   else setAuthMode("signin");
@@ -767,7 +771,7 @@ function renderAuthState() {
   if (authBackApp) authBackApp.hidden = !hasSession;
 
   if (authMode === "reset") {
-    setAuthStatus("Digite a nova senha recebida pelo fluxo de recuperação.", "success");
+    setAuthStatus("Digite a nova senha recebida pelo fluxo de recuperaÃ§Ã£o.", "success");
     if (signOutCloudButton) signOutCloudButton.disabled = !hasSession;
     return;
   }
@@ -789,7 +793,7 @@ function renderSettingsAccount() {
   const email = session?.user?.email || authEmailInput?.value || "";
   const hasSession = hasAuthenticatedSession();
 
-  if (settingsUserEmail) settingsUserEmail.textContent = email || "Conta não conectada";
+  if (settingsUserEmail) settingsUserEmail.textContent = email || "Conta nÃ£o conectada";
   if (settingsSignOutButton) settingsSignOutButton.disabled = !hasSession;
   if (settingsChangePasswordButton) settingsChangePasswordButton.disabled = !email;
 }
@@ -826,7 +830,7 @@ async function cloudAuthRequest(path, options = {}) {
     const detail =
       typeof data === "string"
         ? data
-        : data?.msg || data?.message || data?.error_description || `Serviço de autenticação respondeu ${response.status}.`;
+        : data?.msg || data?.message || data?.error_description || `ServiÃ§o de autenticaÃ§Ã£o respondeu ${response.status}.`;
     throw new Error(detail);
   }
 
@@ -916,9 +920,9 @@ function renderCloudConfig() {
   cloudPublishableKeyInput.value = config.publishableKey;
 
   if (config.publishableKey && config.organizationId) {
-    setCloudStatus("Conexão salva. Workspace pronto para sincronizar.", "success");
+    setCloudStatus("ConexÃ£o salva. Workspace pronto para sincronizar.", "success");
   } else if (config.publishableKey) {
-    setCloudStatus("Chave salva. Teste a conexão e crie o workspace.", "");
+    setCloudStatus("Chave salva. Teste a conexÃ£o e crie o workspace.", "");
   } else {
     setCloudStatus("Cole a API URL e a publishable key para ativar a nuvem.", "");
   }
@@ -935,8 +939,8 @@ function saveCloudConfig(showFeedback = true) {
   persistCloudConfig(config);
 
   if (showFeedback) {
-    setCloudStatus("Conexão salva neste navegador.", "success");
-    showToast("Conexão da nuvem salva.");
+    setCloudStatus("ConexÃ£o salva neste navegador.", "success");
+    showToast("ConexÃ£o da nuvem salva.");
   }
 
   return config;
@@ -977,11 +981,11 @@ function supabaseErrorMessage(error) {
   const message = String(error?.message || error || "Erro inesperado.");
 
   if (/permission denied|row-level security|violates row-level security/i.test(message)) {
-    return "Conexão chegou no Supabase, mas falta liberar permissão/API para estas tabelas.";
+    return "ConexÃ£o chegou no Supabase, mas falta liberar permissÃ£o/API para estas tabelas.";
   }
 
   if (/Failed to fetch|NetworkError/i.test(message)) {
-    return "Não consegui acessar o Supabase. Confira a API URL.";
+    return "NÃ£o consegui acessar o Supabase. Confira a API URL.";
   }
 
   return message.length > 170 ? `${message.slice(0, 170)}...` : message;
@@ -1041,7 +1045,7 @@ async function runCloudAction(workingMessage, successMessage, action) {
     console.error(error);
     const message = supabaseErrorMessage(error);
     setCloudStatus(message, "error");
-    showToast("Ação de nuvem não concluída.");
+    showToast("AÃ§Ã£o de nuvem nÃ£o concluÃ­da.");
     return null;
   } finally {
     setCloudBusy(false);
@@ -1078,7 +1082,7 @@ async function runAuthAction(workingMessage, successMessage, action) {
     console.error(error);
     const message = supabaseErrorMessage(error);
     setAuthStatus(message, "error");
-    showToast("Ação de conta não concluída.");
+    showToast("AÃ§Ã£o de conta nÃ£o concluÃ­da.");
     return null;
   } finally {
     setAuthBusy(false);
@@ -1095,12 +1099,12 @@ function authFormPayload() {
 }
 
 function validateAuthForm({ email, password }) {
-  if (!email || !email.includes("@")) throw new Error("Informe um e-mail válido.");
+  if (!email || !email.includes("@")) throw new Error("Informe um e-mail vÃ¡lido.");
   if (!password || password.length < 6) throw new Error("A senha precisa ter pelo menos 6 caracteres.");
 }
 
 async function ensureCloudProfile(user, form = authFormPayload()) {
-  if (!user?.id) throw new Error("Usuário autenticado não encontrado.");
+  if (!user?.id) throw new Error("UsuÃ¡rio autenticado nÃ£o encontrado.");
 
   return supabaseRequest("profiles?on_conflict=id", {
     method: "POST",
@@ -1146,13 +1150,19 @@ async function syncAuthProfileAndWorkspace(form = authFormPayload()) {
   const organization = await ensureCloudOrganization();
   await ensureCloudMembership(organization.id, user.id);
   hydrateForm();
-  saveState();
+  saveState(false, { syncCloud: false });
 
   return organization;
 }
 
+async function syncWorkspaceAfterLogin(hasLocalWorkspace) {
+  if (hasLocalWorkspace) await syncAllDataToCloud({ silent: true });
+  return loadDataFromCloud({ confirm: false, silent: true });
+}
+
 async function signUpCloudAccount() {
   return runAuthAction("Criando conta...", "", async () => {
+    const hasLocalWorkspace = hasPersistedWorkspaceData();
     const form = authFormPayload();
     validateAuthForm(form);
 
@@ -1180,13 +1190,14 @@ async function signUpCloudAccount() {
     setAuthStatus("Conta criada com sucesso.", "success");
     showToast("Conta criada e conectada.");
     showPage("#dashboard");
-    syncAllDataToCloud({ silent: true });
+    await syncWorkspaceAfterLogin(hasLocalWorkspace);
     return response;
   });
 }
 
 async function signInCloudAccount() {
   return runAuthAction("Entrando na conta...", "", async () => {
+    const hasLocalWorkspace = hasPersistedWorkspaceData();
     const form = authFormPayload();
     validateAuthForm(form);
 
@@ -1198,20 +1209,20 @@ async function signInCloudAccount() {
       },
     });
     const session = saveCloudSession(response);
-    if (!session) throw new Error("Não foi possível iniciar sessão.");
+    if (!session) throw new Error("NÃ£o foi possÃ­vel iniciar sessÃ£o.");
 
     await syncAuthProfileAndWorkspace(form);
     renderAuthState();
     setAuthStatus("Acesso confirmado.", "success");
     showToast("Conta conectada.");
     showPage("#dashboard");
-    syncAllDataToCloud({ silent: true });
+    await syncWorkspaceAfterLogin(hasLocalWorkspace);
     return response;
   });
 }
 
 async function resendAuthConfirmationEmail() {
-  return runAuthAction("Reenviando confirmação...", "", async () => {
+  return runAuthAction("Reenviando confirmaÃ§Ã£o...", "", async () => {
     const form = authFormPayload();
     if (!form.email || !form.email.includes("@")) throw new Error("Informe o e-mail para reenviar.");
 
@@ -1226,15 +1237,15 @@ async function resendAuthConfirmationEmail() {
       },
     });
 
-    setAuthStatus("Confirmação reenviada. Verifique caixa de entrada e spam.", "success");
-    showToast("Confirmação reenviada.");
+    setAuthStatus("ConfirmaÃ§Ã£o reenviada. Verifique caixa de entrada e spam.", "success");
+    showToast("ConfirmaÃ§Ã£o reenviada.");
   });
 }
 
 async function requestPasswordRecoveryEmail() {
-  return runAuthAction("Enviando recuperação...", "", async () => {
+  return runAuthAction("Enviando recuperaÃ§Ã£o...", "", async () => {
     const form = authFormPayload();
-    if (!form.email || !form.email.includes("@")) throw new Error("Informe o e-mail de recuperação.");
+    if (!form.email || !form.email.includes("@")) throw new Error("Informe o e-mail de recuperaÃ§Ã£o.");
 
     await cloudAuthRequest(`recover?redirect_to=${encodeURIComponent(authRedirectUrl())}`, {
       method: "POST",
@@ -1243,8 +1254,8 @@ async function requestPasswordRecoveryEmail() {
       },
     });
 
-    setAuthStatus("E-mail de recuperação enviado. Verifique caixa de entrada e spam.", "success");
-    showToast("Recuperação enviada.");
+    setAuthStatus("E-mail de recuperaÃ§Ã£o enviado. Verifique caixa de entrada e spam.", "success");
+    showToast("RecuperaÃ§Ã£o enviada.");
   });
 }
 
@@ -1254,7 +1265,7 @@ async function updateCloudPassword() {
     if (!form.password || form.password.length < 6) throw new Error("A nova senha precisa ter pelo menos 6 caracteres.");
 
     const session = await ensureFreshCloudSession();
-    if (!session?.access_token) throw new Error("Abra o link de recuperação novamente para trocar a senha.");
+    if (!session?.access_token) throw new Error("Abra o link de recuperaÃ§Ã£o novamente para trocar a senha.");
 
     await cloudAuthRequest("user", {
       method: "PUT",
@@ -1265,13 +1276,13 @@ async function updateCloudPassword() {
     });
 
     setAuthMode("signin");
-    setAuthStatus("Senha atualizada. Você já pode entrar.", "success");
+    setAuthStatus("Senha atualizada. VocÃª jÃ¡ pode entrar.", "success");
     showToast("Senha atualizada.");
   });
 }
 
 async function signOutCloudAccount() {
-  return runAuthAction("Saindo da conta...", "Sessão encerrada.", async () => {
+  return runAuthAction("Saindo da conta...", "SessÃ£o encerrada.", async () => {
     const session = loadCloudSession();
 
     if (session?.access_token) {
@@ -1318,7 +1329,7 @@ function openPasswordRecoveryFromSettings() {
 }
 
 async function testCloudConnection() {
-  return runCloudAction("Testando conexão com o Supabase...", "Supabase conectado.", async () => {
+  return runCloudAction("Testando conexÃ£o com o Supabase...", "Supabase conectado.", async () => {
     const session = loadCloudSession();
 
     if (session?.access_token) {
@@ -1363,10 +1374,24 @@ async function ensureCloudOrganization() {
     }
   }
 
+  const accessibleOrganizations = await supabaseRequest("organizations?select=*&order=created_at.desc&limit=1", {
+    prefer: "",
+  });
+  const existingOrganization = Array.isArray(accessibleOrganizations) ? accessibleOrganizations[0] : null;
+
+  if (existingOrganization?.id) {
+    if (user?.id) await ensureCloudMembership(existingOrganization.id, user.id);
+    persistCloudConfig({
+      ...config,
+      organizationId: existingOrganization.id,
+    });
+    return existingOrganization;
+  }
+
   const bid = activeBid();
   const location = locationParts(bid.location);
   const organizationPayload = {
-    name: bid.company || "OrçaSan Workspace",
+    name: bid.company || "OrÃ§aSan Workspace",
     legal_name: bid.company || null,
     document_number: bid.companyDocument || null,
     city: location.city,
@@ -1393,7 +1418,7 @@ async function ensureCloudOrganization() {
   }
   const organization = Array.isArray(organizationRows) ? organizationRows[0] : organizationRows;
 
-  if (!organization?.id) throw new Error("Workspace não retornou ID no Supabase.");
+  if (!organization?.id) throw new Error("Workspace nÃ£o retornou ID no Supabase.");
 
   if (user?.id) await ensureCloudMembership(organization.id, user.id);
 
@@ -1414,7 +1439,7 @@ function cloudBidPayload(budget, organizationId) {
 
   return {
     organization_id: organizationId,
-    title: bid.title || "Licitação sem nome",
+    title: bid.title || "LicitaÃ§Ã£o sem nome",
     agency: bid.agency || null,
     edital_number: bid.editalNumber || null,
     location: bid.location || null,
@@ -1424,7 +1449,7 @@ function cloudBidPayload(budget, organizationId) {
     validity_days: Number(bid.validityDays) || 0,
     technical_owner: bid.technicalOwner || null,
     technical_registry: bid.technicalRegistry || null,
-    status: bid.status || "Em orçamento",
+    status: bid.status || "Em orÃ§amento",
     updated_at: new Date().toISOString(),
   };
 }
@@ -1453,7 +1478,7 @@ function cloudBudgetItemsPayload(bidId, items) {
     position: index + 1,
     stage: item.stage || null,
     code: item.code || null,
-    description: item.description || "Item sem descrição",
+    description: item.description || "Item sem descriÃ§Ã£o",
     unit: item.unit || "un",
     quantity: parseNumber(item.quantity),
     unit_price: parseNumber(item.unitPrice),
@@ -1512,7 +1537,7 @@ async function saveBudgetToCloud(budget, organization = null) {
     cloudBid = Array.isArray(createdRows) ? createdRows[0] : createdRows;
   }
 
-  if (!cloudBid?.id) throw new Error("Licitação não retornou ID no Supabase.");
+  if (!cloudBid?.id) throw new Error("LicitaÃ§Ã£o nÃ£o retornou ID no Supabase.");
 
   budget.cloudBidId = cloudBid.id;
   await replaceCloudBdiSettings(cloudBid.id, budget.bdi);
@@ -1525,7 +1550,7 @@ function cloudCompositionsPayload(organizationId) {
   return state.compositions.map((composition) => ({
     organization_id: organizationId,
     code: composition.code || null,
-    title: composition.title || "Composição sem nome",
+    title: composition.title || "ComposiÃ§Ã£o sem nome",
     unit: composition.unit || "un",
     unit_cost: parseNumber(composition.cost),
     note: composition.note || null,
@@ -1578,7 +1603,7 @@ async function syncActiveBudgetToCloud(options = {}) {
   }
 
   try {
-    return await runCloudAction("Enviando licitação atual para a nuvem...", "Licitação enviada para a nuvem.", persistActiveBudgetToCloud);
+    return await runCloudAction("Enviando licitaÃ§Ã£o atual para a nuvem...", "LicitaÃ§Ã£o enviada para a nuvem.", persistActiveBudgetToCloud);
   } finally {
     isCloudSyncing = false;
   }
@@ -1613,7 +1638,7 @@ async function syncAllDataToCloud(options = {}) {
   if (silent) {
     try {
       const result = await persistAllDataToCloud();
-      setCloudStatus(`${result.budgetCount} licitação(ões) sincronizada(s) com a nuvem.`, "success");
+      setCloudStatus(`${result.budgetCount} licitaÃ§Ã£o(Ãµes) sincronizada(s) com a nuvem.`, "success");
       return result;
     } catch (error) {
       console.error(error);
@@ -1707,7 +1732,7 @@ function mapCloudBid(row, organization, bdiRow, itemRows, index) {
         validityDays: Number(row.validity_days) || 0,
         technicalOwner: row.technical_owner || "",
         technicalRegistry: row.technical_registry || "",
-        status: row.status || "Em orçamento",
+        status: row.status || "Em orÃ§amento",
       },
       bdi: mapCloudBdi(bdiRow),
       items: itemRows.map(mapCloudItem),
@@ -1730,12 +1755,8 @@ function mapCloudComposition(row, index) {
   );
 }
 
-async function loadDataFromCloud() {
-  const confirmed = window.confirm("Carregar dados da nuvem? Os dados atuais deste navegador serão substituídos.");
-  if (!confirmed) return null;
-
-  return runCloudAction("Carregando dados da nuvem...", "Dados carregados da nuvem.", async () => {
-    const organization = await findCloudOrganization();
+async function persistCloudDataToLocal() {
+  const organization = await findCloudOrganization();
     const cloudBids = await supabaseRequest(
       `bids?organization_id=eq.${encodeURIComponent(organization.id)}&select=*&order=created_at.desc`,
       { prefer: "" },
@@ -1769,7 +1790,34 @@ async function loadDataFromCloud() {
     hydrateForm();
     render();
     saveState(false, { syncCloud: false });
-  });
+
+    return {
+      organization,
+      budgetCount: budgets.length,
+    };
+}
+
+async function loadDataFromCloud(options = {}) {
+  const { confirm = true, silent = false } = options;
+
+  if (confirm) {
+    const confirmed = window.confirm("Carregar dados da nuvem? Os dados atuais deste navegador serão substituídos.");
+    if (!confirmed) return null;
+  }
+
+  if (silent) {
+    try {
+      const result = await persistCloudDataToLocal();
+      setCloudStatus(`${result.budgetCount} licitação(ões) carregada(s) da nuvem.`, "success");
+      return result;
+    } catch (error) {
+      console.error(error);
+      setCloudStatus(supabaseErrorMessage(error), "error");
+      return null;
+    }
+  }
+
+  return runCloudAction("Carregando dados da nuvem...", "Dados carregados da nuvem.", persistCloudDataToLocal);
 }
 
 function escapeHtml(value) {
@@ -1861,7 +1909,7 @@ function getBdiEntries(budget = getActiveBudget()) {
   const bdi = normalizeBdi(budget.bdi);
 
   return [
-    ["Administração central", bdi.admin],
+    ["AdministraÃ§Ã£o central", bdi.admin],
     ["Seguros", bdi.insurance],
     ["Garantias", bdi.guarantees],
     ["Risco", bdi.risk],
@@ -1953,20 +2001,20 @@ function renderBidMeta() {
     .sort((a, b) => String(a.bid.openingDate).localeCompare(String(b.bid.openingDate)));
   const nextBudget = datedBudgets[0] || getActiveBudget();
 
-  document.querySelector("#bid-status-pill").textContent = bid.status || "Em orçamento";
+  document.querySelector("#bid-status-pill").textContent = bid.status || "Em orÃ§amento";
   document.querySelector("#next-opening-date").textContent = toDateBR(nextBudget.bid.openingDate);
   document.querySelector("#next-opening-summary").textContent =
-    `${nextBudget.bid.editalNumber || "Sem edital"} - ${nextBudget.bid.workType || "Tipo não informado"}`;
+    `${nextBudget.bid.editalNumber || "Sem edital"} - ${nextBudget.bid.workType || "Tipo nÃ£o informado"}`;
 }
 
 function renderBidList() {
   const filteredBudgets =
     bidStatusFilter === "Todas"
       ? state.budgets
-      : state.budgets.filter((budget) => (budget.bid.status || "Em orçamento") === bidStatusFilter);
+      : state.budgets.filter((budget) => (budget.bid.status || "Em orÃ§amento") === bidStatusFilter);
 
   if (!filteredBudgets.length) {
-    bidsList.innerHTML = '<div class="empty-state">Nenhuma licitação neste filtro.</div>';
+    bidsList.innerHTML = '<div class="empty-state">Nenhuma licitaÃ§Ã£o neste filtro.</div>';
     return;
   }
 
@@ -1980,18 +2028,18 @@ function renderBidList() {
           <button class="bid-card-main" data-select-budget="${escapeHtml(budget.id)}" type="button">
             <div>
               <span class="bid-card-kicker">${escapeHtml(budget.bid.editalNumber || "Sem edital")}</span>
-              <strong>${escapeHtml(budget.bid.title || "Licitação sem nome")}</strong>
-              <span>${escapeHtml(budget.bid.agency || "Órgão não informado")} • ${escapeHtml(budget.bid.location || "Local não informado")}</span>
+              <strong>${escapeHtml(budget.bid.title || "LicitaÃ§Ã£o sem nome")}</strong>
+              <span>${escapeHtml(budget.bid.agency || "Ã“rgÃ£o nÃ£o informado")} â€¢ ${escapeHtml(budget.bid.location || "Local nÃ£o informado")}</span>
             </div>
             <div class="bid-card-meta">
-              <span>${escapeHtml(budget.bid.status || "Em orçamento")}</span>
+              <span>${escapeHtml(budget.bid.status || "Em orÃ§amento")}</span>
               <strong>${toCurrency(totals.totalWithBdi)}</strong>
               <span>Abertura: ${toDateBR(budget.bid.openingDate)}</span>
             </div>
           </button>
           <div class="bid-card-actions">
             <button class="ghost-button compact" data-duplicate-budget="${escapeHtml(budget.id)}" type="button">Duplicar</button>
-            <button class="ghost-button compact danger-text" data-delete-budget="${escapeHtml(budget.id)}" type="button">Excluir licitação</button>
+            <button class="ghost-button compact danger-text" data-delete-budget="${escapeHtml(budget.id)}" type="button">Excluir licitaÃ§Ã£o</button>
           </div>
         </article>
       `;
@@ -2001,7 +2049,7 @@ function renderBidList() {
 
 function renderPipeline() {
   pipelineGrid.innerHTML = BID_STATUSES.map((status) => {
-    const budgets = state.budgets.filter((budget) => (budget.bid.status || "Em orçamento") === status);
+    const budgets = state.budgets.filter((budget) => (budget.bid.status || "Em orÃ§amento") === status);
     const total = budgets.reduce((sum, budget) => sum + calculateBudget(budget).totalWithBdi, 0);
 
     return `
@@ -2022,7 +2070,7 @@ function renderBidFilters() {
       const count =
         status === "Todas"
           ? state.budgets.length
-          : state.budgets.filter((budget) => (budget.bid.status || "Em orçamento") === status).length;
+          : state.budgets.filter((budget) => (budget.bid.status || "Em orÃ§amento") === status).length;
 
       return `
         <button class="filter-tab ${bidStatusFilter === status ? "active" : ""}" data-filter-status="${escapeHtml(status)}" type="button">
@@ -2040,10 +2088,10 @@ function renderDashboardOverview() {
   }));
   const totalValue = portfolio.reduce((sum, item) => sum + item.totals.totalWithBdi, 0);
   const inProgress = state.budgets.filter((budget) =>
-    ["Em orçamento", "Em revisão"].includes(budget.bid.status || "Em orçamento"),
+    ["Em orÃ§amento", "Em revisÃ£o"].includes(budget.bid.status || "Em orÃ§amento"),
   ).length;
   const finished = state.budgets.filter((budget) =>
-    ["Enviada", "Vencida", "Perdida"].includes(budget.bid.status || "Em orçamento"),
+    ["Enviada", "Vencida", "Perdida"].includes(budget.bid.status || "Em orÃ§amento"),
   ).length;
 
   document.querySelector("#metric-bids-total").textContent = state.budgets.length;
@@ -2062,9 +2110,9 @@ function renderDashboardOverview() {
       return `
         <article class="recent-bid-row ${isActive ? "active" : ""}">
           <div>
-            <span>${escapeHtml(budget.bid.editalNumber || "Sem edital")} • ${escapeHtml(budget.bid.status || "Em orçamento")}</span>
-            <strong>${escapeHtml(budget.bid.title || "Licitação sem nome")}</strong>
-            <small>${escapeHtml(budget.bid.agency || "Órgão não informado")} • ${toCurrency(totals.totalWithBdi)}</small>
+            <span>${escapeHtml(budget.bid.editalNumber || "Sem edital")} â€¢ ${escapeHtml(budget.bid.status || "Em orÃ§amento")}</span>
+            <strong>${escapeHtml(budget.bid.title || "LicitaÃ§Ã£o sem nome")}</strong>
+            <small>${escapeHtml(budget.bid.agency || "Ã“rgÃ£o nÃ£o informado")} â€¢ ${toCurrency(totals.totalWithBdi)}</small>
           </div>
           <button class="ghost-button compact" data-dashboard-open-budget="${escapeHtml(budget.id)}" type="button">Abrir</button>
         </article>
@@ -2124,8 +2172,8 @@ function renderCharts(budgetSummary) {
 
   activeBudgetLabel.textContent = budget.bid.status || "Selecionada";
   activeBudgetCard.innerHTML = `
-    <strong>${escapeHtml(budget.bid.title || "Licitação sem nome")}</strong>
-    <span>${escapeHtml(budget.bid.editalNumber || "Sem edital")} • ${escapeHtml(budget.bid.agency || "Órgão não informado")}</span>
+    <strong>${escapeHtml(budget.bid.title || "LicitaÃ§Ã£o sem nome")}</strong>
+    <span>${escapeHtml(budget.bid.editalNumber || "Sem edital")} â€¢ ${escapeHtml(budget.bid.agency || "Ã“rgÃ£o nÃ£o informado")}</span>
     <div class="active-budget-facts">
       <div><span>Abertura</span><strong>${toDateBR(budget.bid.openingDate)}</strong></div>
       <div><span>Itens</span><strong>${budget.items.length}</strong></div>
@@ -2134,7 +2182,7 @@ function renderCharts(budgetSummary) {
   `;
 
   if (!stageTotals.length) {
-    stageChart.innerHTML = '<div class="empty-state">Adicione itens para gerar o gráfico por etapa.</div>';
+    stageChart.innerHTML = '<div class="empty-state">Adicione itens para gerar o grÃ¡fico por etapa.</div>';
   } else {
     stageChart.innerHTML = stageTotals
       .slice(0, 6)
@@ -2145,7 +2193,7 @@ function renderCharts(budgetSummary) {
           <div class="chart-row">
             <div class="chart-row-label">
               <strong>${escapeHtml(item.stage)}</strong>
-              <span>${toCurrency(item.total)} • ${percentFormatter.format(share)}%</span>
+              <span>${toCurrency(item.total)} â€¢ ${percentFormatter.format(share)}%</span>
             </div>
             <div class="chart-bar"><span style="width: ${Math.max(width, 3)}%"></span></div>
           </div>
@@ -2214,7 +2262,7 @@ function renderTable(classifiedItems) {
           <td class="money-cell">${toCurrency(calculated.totalWithBdi)}</td>
           <td><span class="abc-pill ${calculated.abcClass.toLowerCase()}">${calculated.abcClass}</span></td>
           <td>
-            <button class="icon-button danger-button" data-remove-id="${escapeHtml(item.id)}" type="button" title="Remover item">×</button>
+            <button class="icon-button danger-button" data-remove-id="${escapeHtml(item.id)}" type="button" title="Remover item">Ã—</button>
           </td>
         </tr>
       `;
@@ -2234,14 +2282,14 @@ function renderAbcList(classifiedItems) {
       (item) => `
         <div class="abc-row">
           <div class="abc-row-header">
-            <strong>${escapeHtml(item.description || "Item sem descrição")}</strong>
+            <strong>${escapeHtml(item.description || "Item sem descriÃ§Ã£o")}</strong>
             <span>${toCurrency(item.totalWithBdi)}</span>
           </div>
           <div class="bar" aria-hidden="true">
             <div class="bar-fill" style="width: ${Math.max(item.share * 100, 3)}%"></div>
           </div>
           <div class="abc-row-footer">
-            <span>${percentFormatter.format(item.share * 100)}% do orçamento</span>
+            <span>${percentFormatter.format(item.share * 100)}% do orÃ§amento</span>
             <span>Classe ${item.abcClass}</span>
           </div>
         </div>
@@ -2260,7 +2308,7 @@ function buildAlerts(budgetSummary) {
     alerts.push({
       type: "warning",
       title: biggestItem.description || "Item de maior impacto",
-      text: `Representa ${percentFormatter.format(biggestItem.share * 100)}% do orçamento. Vale conferir composição, produtividade e cotação.`,
+      text: `Representa ${percentFormatter.format(biggestItem.share * 100)}% do orÃ§amento. Vale conferir composiÃ§Ã£o, produtividade e cotaÃ§Ã£o.`,
     });
   }
 
@@ -2268,19 +2316,19 @@ function buildAlerts(budgetSummary) {
     alerts.push({
       type: "warning",
       title: "BDI baixo",
-      text: "O percentual está abaixo da faixa comum para obras públicas. Confira tributos, lucro, risco e despesas financeiras.",
+      text: "O percentual estÃ¡ abaixo da faixa comum para obras pÃºblicas. Confira tributos, lucro, risco e despesas financeiras.",
     });
   } else if (budgetSummary.bdiPercent > 35) {
     alerts.push({
       type: "warning",
       title: "BDI alto",
-      text: "O percentual pode exigir justificativa técnica e atenção ao limite aceito pelo edital.",
+      text: "O percentual pode exigir justificativa tÃ©cnica e atenÃ§Ã£o ao limite aceito pelo edital.",
     });
   } else {
     alerts.push({
       type: "positive",
       title: "BDI consistente",
-      text: "Percentual dentro de uma faixa preliminar saudável para análise de proposta.",
+      text: "Percentual dentro de uma faixa preliminar saudÃ¡vel para anÃ¡lise de proposta.",
     });
   }
 
@@ -2288,7 +2336,7 @@ function buildAlerts(budgetSummary) {
     alerts.push({
       type: "warning",
       title: `${emptyValues.length} item(ns) incompleto(s)`,
-      text: "Revise quantidades e preços unitários antes de gerar a proposta.",
+      text: "Revise quantidades e preÃ§os unitÃ¡rios antes de gerar a proposta.",
     });
   }
 
@@ -2322,16 +2370,16 @@ function renderCompositions() {
       (composition) => `
         <div class="composition-row editable-composition" data-composition-id="${escapeHtml(composition.id)}">
           <div class="composition-fields">
-            <input class="table-input code-input" data-composition-field="code" value="${escapeHtml(composition.code)}" aria-label="Código da composição" />
-            <input class="table-input composition-title-input" data-composition-field="title" value="${escapeHtml(composition.title)}" aria-label="Título da composição" />
-            <textarea class="composition-note-input" data-composition-field="note" aria-label="Observação da composição">${escapeHtml(composition.note)}</textarea>
+            <input class="table-input code-input" data-composition-field="code" value="${escapeHtml(composition.code)}" aria-label="CÃ³digo da composiÃ§Ã£o" />
+            <input class="table-input composition-title-input" data-composition-field="title" value="${escapeHtml(composition.title)}" aria-label="TÃ­tulo da composiÃ§Ã£o" />
+            <textarea class="composition-note-input" data-composition-field="note" aria-label="ObservaÃ§Ã£o da composiÃ§Ã£o">${escapeHtml(composition.note)}</textarea>
           </div>
           <div class="composition-price">
             <input class="table-input unit-input" data-composition-field="unit" value="${escapeHtml(composition.unit)}" aria-label="Unidade" />
-            <input class="table-input money-input" data-composition-field="cost" type="number" min="0" step="0.01" value="${parseNumber(composition.cost)}" aria-label="Custo unitário" />
+            <input class="table-input money-input" data-composition-field="cost" type="number" min="0" step="0.01" value="${parseNumber(composition.cost)}" aria-label="Custo unitÃ¡rio" />
             <strong>${toCurrency(composition.cost)}</strong>
             <button class="ghost-button compact" data-apply-composition="${escapeHtml(composition.id)}" type="button">Aplicar</button>
-            <button class="icon-button danger-button" data-remove-composition="${escapeHtml(composition.id)}" type="button" title="Remover composição">×</button>
+            <button class="icon-button danger-button" data-remove-composition="${escapeHtml(composition.id)}" type="button" title="Remover composiÃ§Ã£o">Ã—</button>
           </div>
         </div>
       `,
@@ -2343,32 +2391,32 @@ function renderReports(budgetSummary) {
   const budget = getActiveBudget();
   const reports = [
     {
-      title: "Orçamento sintético",
+      title: "OrÃ§amento sintÃ©tico",
       text: `${budget.items.length} itens, total de ${toCurrency(budgetSummary.totalWithBdi)} com BDI.`,
       action: "csv",
       label: "Exportar",
     },
     {
       title: "Planilha completa",
-      text: "Gera um arquivo Excel compatível com dados da licitação, BDI, itens e curva ABC.",
+      text: "Gera um arquivo Excel compatÃ­vel com dados da licitaÃ§Ã£o, BDI, itens e curva ABC.",
       action: "xls",
       label: "Gerar XLS",
     },
     {
       title: "Curva ABC",
-      text: `${budgetSummary.criticalItems} item(ns) classificados como A para análise de risco.`,
+      text: `${budgetSummary.criticalItems} item(ns) classificados como A para anÃ¡lise de risco.`,
       action: "abc",
-      label: "Ver análise",
+      label: "Ver anÃ¡lise",
     },
     {
       title: "Proposta comercial",
-      text: `Validade de ${budget.bid.validityDays || 0} dias e prazo de execução de ${budget.bid.executionDays || 0} dias.`,
+      text: `Validade de ${budget.bid.validityDays || 0} dias e prazo de execuÃ§Ã£o de ${budget.bid.executionDays || 0} dias.`,
       action: "print",
       label: "Gerar PDF",
     },
     {
-      title: "Memória do BDI",
-      text: `Administração, risco, lucro, tributos e despesas totalizam ${toPercent(budgetSummary.bdiPercent)}.`,
+      title: "MemÃ³ria do BDI",
+      text: `AdministraÃ§Ã£o, risco, lucro, tributos e despesas totalizam ${toPercent(budgetSummary.bdiPercent)}.`,
       action: "bdi",
       label: "Revisar",
     },
@@ -2508,9 +2556,9 @@ function addItem() {
 
   items.push({
     id: createId(),
-    stage: "Novo serviço",
+    stage: "Novo serviÃ§o",
     code: `07.${nextNumber}`,
-    description: "Novo item de orçamento",
+    description: "Novo item de orÃ§amento",
     unit: "un",
     quantity: 1,
     unitPrice: 1000,
@@ -2525,7 +2573,6 @@ function addItem() {
 }
 
 function removeItem(id) {
-  const confirmed = window.confirm("Remover este item da planilha?");
   if (!confirmed) return;
 
   getActiveBudget().items = activeItems().filter((item) => item.id !== id);
@@ -2551,28 +2598,27 @@ function addComposition() {
   state.compositions.unshift({
     id: createId(),
     code: `COMP-NOVA-${nextNumber}`,
-    title: "Nova composição de serviço",
+    title: "Nova composiÃ§Ã£o de serviÃ§o",
     unit: "un",
     cost: 0,
-    note: "Descreva os insumos, produtividade e critérios de medição.",
+    note: "Descreva os insumos, produtividade e critÃ©rios de mediÃ§Ã£o.",
   });
 
   renderCompositions();
   scheduleSave();
-  showToast("Composição criada.");
+  showToast("ComposiÃ§Ã£o criada.");
 
   const firstTitle = compositionList.querySelector(".composition-title-input");
   if (firstTitle) firstTitle.focus();
 }
 
 function removeComposition(id) {
-  const confirmed = window.confirm("Remover esta composição do banco próprio?");
   if (!confirmed) return;
 
   state.compositions = state.compositions.filter((composition) => composition.id !== id);
   renderCompositions();
   scheduleSave();
-  showToast("Composição removida.");
+  showToast("ComposiÃ§Ã£o removida.");
 }
 
 function applyComposition(id) {
@@ -2581,7 +2627,7 @@ function applyComposition(id) {
 
   activeItems().push({
     id: createId(),
-    stage: "Composição aplicada",
+    stage: "ComposiÃ§Ã£o aplicada",
     code: composition.code,
     description: composition.title,
     unit: composition.unit,
@@ -2591,7 +2637,7 @@ function applyComposition(id) {
 
   render();
   scheduleSave();
-  showToast("Composição aplicada na planilha.");
+  showToast("ComposiÃ§Ã£o aplicada na planilha.");
   showPage("#orcamento");
 }
 
@@ -2607,12 +2653,12 @@ function createBudget() {
       companyDocument: current.bid.companyDocument,
       technicalOwner: current.bid.technicalOwner,
       technicalRegistry: current.bid.technicalRegistry,
-      title: `Nova licitação de saneamento ${nextIndex}`,
+      title: `Nova licitaÃ§Ã£o de saneamento ${nextIndex}`,
       agency: "",
       editalNumber: `Edital ${String(nextIndex).padStart(3, "0")}/2026`,
       location: "",
       openingDate: "",
-      status: "Em orçamento",
+      status: "Em orÃ§amento",
     },
     bdi: {
       ...current.bdi,
@@ -2625,7 +2671,7 @@ function createBudget() {
   hydrateForm();
   render();
   saveState();
-  showToast("Nova licitação criada.");
+  showToast("Nova licitaÃ§Ã£o criada.");
   showPage("#licitacao");
 }
 
@@ -2636,7 +2682,7 @@ function selectBudget(id) {
   hydrateForm();
   render();
   saveState();
-  showToast("Licitação selecionada.");
+  showToast("LicitaÃ§Ã£o selecionada.");
 }
 
 function duplicateBudget(id) {
@@ -2646,9 +2692,9 @@ function duplicateBudget(id) {
   const copy = clone(source);
   copy.id = createId();
   copy.createdAt = new Date().toISOString();
-  copy.bid.title = `${source.bid.title || "Licitação"} - cópia`;
-  copy.bid.editalNumber = `${source.bid.editalNumber || "Edital"} - cópia`;
-  copy.bid.status = "Em orçamento";
+  copy.bid.title = `${source.bid.title || "LicitaÃ§Ã£o"} - cÃ³pia`;
+  copy.bid.editalNumber = `${source.bid.editalNumber || "Edital"} - cÃ³pia`;
+  copy.bid.status = "Em orÃ§amento";
   copy.items = copy.items.map((item) => ({
     ...item,
     id: createId(),
@@ -2660,17 +2706,16 @@ function duplicateBudget(id) {
   hydrateForm();
   render();
   saveState();
-  showToast("Licitação duplicada.");
+  showToast("LicitaÃ§Ã£o duplicada.");
 }
 
 function deleteBudget(id) {
   if (state.budgets.length <= 1) {
-    showToast("Mantenha pelo menos uma licitação.");
+    showToast("Mantenha pelo menos uma licitaÃ§Ã£o.");
     return;
   }
 
   const target = state.budgets.find((budget) => budget.id === id);
-  const confirmed = window.confirm(`Excluir a licitação "${target?.bid.title || "selecionada"}"? Esta ação remove os dados deste navegador.`);
   if (!confirmed) return;
 
   state.budgets = state.budgets.filter((budget) => budget.id !== id);
@@ -2682,7 +2727,7 @@ function deleteBudget(id) {
 
   render();
   saveState();
-  showToast("Licitação excluída.");
+  showToast("LicitaÃ§Ã£o excluÃ­da.");
 }
 
 function resetOutOfBdiTaxes() {
@@ -2736,11 +2781,11 @@ function exportCsv() {
   const classificationById = new Map(budgetSummary.classifiedItems.map((item) => [item.id, item]));
   const header = [
     "Etapa",
-    "Código",
-    "Descrição",
+    "CÃ³digo",
+    "DescriÃ§Ã£o",
     "Unidade",
     "Quantidade",
-    "Preço unitário sem BDI",
+    "PreÃ§o unitÃ¡rio sem BDI",
     "Total sem BDI",
     "Total com BDI",
     "Classe ABC",
@@ -2765,12 +2810,12 @@ function exportCsv() {
     ["Empresa", budget.bid.company],
     ["CNPJ", budget.bid.companyDocument],
     ["Obra", budget.bid.title],
-    ["Órgão", budget.bid.agency],
+    ["Ã“rgÃ£o", budget.bid.agency],
     ["Edital", budget.bid.editalNumber],
-    ["Município/UF", budget.bid.location],
+    ["MunicÃ­pio/UF", budget.bid.location],
     ["Tipo", budget.bid.workType],
     ["Data de abertura", toDateBR(budget.bid.openingDate)],
-    ["Prazo de execução", `${budget.bid.executionDays || 0} dias`],
+    ["Prazo de execuÃ§Ã£o", `${budget.bid.executionDays || 0} dias`],
     ["Validade da proposta", `${budget.bid.validityDays || 0} dias`],
     ["BDI", toPercent(budgetSummary.bdiPercent)],
     ["Total com BDI", toCurrency(budgetSummary.totalWithBdi)],
@@ -2807,14 +2852,14 @@ function exportXls() {
     ["Empresa", budget.bid.company],
     ["CNPJ", budget.bid.companyDocument],
     ["Obra", budget.bid.title],
-    ["Órgão", budget.bid.agency],
+    ["Ã“rgÃ£o", budget.bid.agency],
     ["Edital", budget.bid.editalNumber],
-    ["Município/UF", budget.bid.location],
+    ["MunicÃ­pio/UF", budget.bid.location],
     ["Tipo de obra", budget.bid.workType],
     ["Data de abertura", toDateBR(budget.bid.openingDate)],
-    ["Prazo de execução", `${budget.bid.executionDays || 0} dias`],
+    ["Prazo de execuÃ§Ã£o", `${budget.bid.executionDays || 0} dias`],
     ["Validade da proposta", `${budget.bid.validityDays || 0} dias`],
-    ["Responsável técnico", budget.bid.technicalOwner],
+    ["ResponsÃ¡vel tÃ©cnico", budget.bid.technicalOwner],
     ["CREA/CAU", budget.bid.technicalRegistry],
     ["Status", budget.bid.status],
   ];
@@ -2866,10 +2911,10 @@ function exportXls() {
         </style>
       </head>
       <body>
-        <h1>OrçaSan - Planilha de orçamento</h1>
+        <h1>OrÃ§aSan - Planilha de orÃ§amento</h1>
         <p>Arquivo gerado em ${new Date().toLocaleString("pt-BR")}</p>
 
-        <h2>Dados da licitação</h2>
+        <h2>Dados da licitaÃ§Ã£o</h2>
         <table>
           ${bidRows.map((row) => spreadsheetRow(row, "label")).join("")}
         </table>
@@ -2881,18 +2926,18 @@ function exportXls() {
           ${spreadsheetRow(["Valor com BDI", toCurrency(budgetSummary.totalWithBdi)], "total")}
         </table>
 
-        <h2>Memória do BDI</h2>
+        <h2>MemÃ³ria do BDI</h2>
         <table>
-          <tr><th>Parâmetro</th><th>Percentual</th></tr>
+          <tr><th>ParÃ¢metro</th><th>Percentual</th></tr>
           ${bdiRows.map((row) => spreadsheetRow(row)).join("")}
           ${spreadsheetRow(["BDI total", toPercent(budgetSummary.bdiPercent)], "total")}
         </table>
 
-        <h2>Planilha orçamentária</h2>
+        <h2>Planilha orÃ§amentÃ¡ria</h2>
         <table>
           <tr>
-            <th>Etapa</th><th>Código</th><th>Descrição</th><th>Unidade</th><th>Quantidade</th>
-            <th>Preço unitário sem BDI</th><th>Total sem BDI</th><th>Total com BDI</th><th>ABC</th><th>Participação</th>
+            <th>Etapa</th><th>CÃ³digo</th><th>DescriÃ§Ã£o</th><th>Unidade</th><th>Quantidade</th>
+            <th>PreÃ§o unitÃ¡rio sem BDI</th><th>Total sem BDI</th><th>Total com BDI</th><th>ABC</th><th>ParticipaÃ§Ã£o</th>
           </tr>
           ${budgetRows.map((row) => spreadsheetRow(row)).join("")}
           ${spreadsheetRow(["", "", "", "", "", "", toCurrency(budgetSummary.totalBase), toCurrency(budgetSummary.totalWithBdi), "", ""], "total")}
@@ -2900,13 +2945,13 @@ function exportXls() {
 
         <h2>Curva ABC</h2>
         <table>
-          <tr><th>Código</th><th>Descrição</th><th>Total com BDI</th><th>Participação</th><th>Acumulado</th><th>Classe</th></tr>
+          <tr><th>CÃ³digo</th><th>DescriÃ§Ã£o</th><th>Total com BDI</th><th>ParticipaÃ§Ã£o</th><th>Acumulado</th><th>Classe</th></tr>
           ${abcRows.map((row) => spreadsheetRow(row)).join("")}
         </table>
 
-        <h2>Composições base</h2>
+        <h2>ComposiÃ§Ãµes base</h2>
         <table>
-          <tr><th>Código</th><th>Composição</th><th>Unidade</th><th>Custo unitário</th><th>Observação</th></tr>
+          <tr><th>CÃ³digo</th><th>ComposiÃ§Ã£o</th><th>Unidade</th><th>Custo unitÃ¡rio</th><th>ObservaÃ§Ã£o</th></tr>
           ${compositionRows.map((row) => spreadsheetRow(row)).join("")}
         </table>
       </body>
@@ -2945,7 +2990,7 @@ function buildProposalDocument() {
     ];
   });
   const bdiRows = [
-    ["Administração central - AC", toPercent(parseNumber(budget.bdi.admin))],
+    ["AdministraÃ§Ã£o central - AC", toPercent(parseNumber(budget.bdi.admin))],
     ["Seguros - S", toPercent(parseNumber(budget.bdi.insurance))],
     ["Garantias - G", toPercent(parseNumber(budget.bdi.guarantees))],
     ["Risco - R", toPercent(parseNumber(budget.bdi.risk))],
@@ -2957,7 +3002,7 @@ function buildProposalDocument() {
   const marketPracticeRows = [
     ["ISS", "Entra no BDI"],
     ["PIS/COFINS", "Entra no BDI"],
-    ["CPRB", "Entra se aplicável"],
+    ["CPRB", "Entra se aplicÃ¡vel"],
     ["IRPJ", "Fora do BDI"],
     ["CSLL", "Fora do BDI"],
   ];
@@ -2968,12 +3013,12 @@ function buildProposalDocument() {
         <div class="proposal-brand">
           <div class="proposal-mark">OS</div>
           <div>
-            <strong>OrçaSan</strong>
+            <strong>OrÃ§aSan</strong>
             <span>Proposta comercial de obra de saneamento</span>
           </div>
         </div>
         <div class="proposal-date">
-          <span>Data de emissão</span>
+          <span>Data de emissÃ£o</span>
           <strong>${escapeHtml(generatedAt)}</strong>
         </div>
       </header>
@@ -2981,7 +3026,7 @@ function buildProposalDocument() {
       <section class="proposal-title">
         <p>Proposta Comercial</p>
         <h1>${escapeHtml(budget.bid.title || "Obra de saneamento")}</h1>
-        <span>${escapeHtml(budget.bid.editalNumber || "Edital não informado")}</span>
+        <span>${escapeHtml(budget.bid.editalNumber || "Edital nÃ£o informado")}</span>
       </section>
 
       <section class="proposal-two-columns">
@@ -2991,17 +3036,17 @@ function buildProposalDocument() {
             ${proposalRows([
               ["Empresa", budget.bid.company],
               ["CNPJ", budget.bid.companyDocument],
-              ["Responsável técnico", budget.bid.technicalOwner],
+              ["ResponsÃ¡vel tÃ©cnico", budget.bid.technicalOwner],
               ["CREA/CAU", budget.bid.technicalRegistry],
             ])}
           </table>
         </div>
         <div>
-          <h2>Licitação</h2>
+          <h2>LicitaÃ§Ã£o</h2>
           <table>
             ${proposalRows([
-              ["Órgão contratante", budget.bid.agency],
-              ["Município/UF", budget.bid.location],
+              ["Ã“rgÃ£o contratante", budget.bid.agency],
+              ["MunicÃ­pio/UF", budget.bid.location],
               ["Tipo de obra", budget.bid.workType],
               ["Data de abertura", toDateBR(budget.bid.openingDate)],
             ])}
@@ -3019,37 +3064,37 @@ function buildProposalDocument() {
       </section>
 
       <section>
-        <h2>Condições da proposta</h2>
+        <h2>CondiÃ§Ãµes da proposta</h2>
         <table>
           ${proposalRows([
-            ["Prazo de execução", `${budget.bid.executionDays || 0} dias`],
+            ["Prazo de execuÃ§Ã£o", `${budget.bid.executionDays || 0} dias`],
             ["Validade da proposta", `${budget.bid.validityDays || 0} dias`],
             ["Status interno", budget.bid.status],
-            ["Observação", "Valores calculados conforme itens, quantitativos, preços unitários e BDI informados no OrçaSan."],
+            ["ObservaÃ§Ã£o", "Valores calculados conforme itens, quantitativos, preÃ§os unitÃ¡rios e BDI informados no OrÃ§aSan."],
           ])}
         </table>
       </section>
 
       <section>
-        <h2>Memória do BDI</h2>
-        <p class="proposal-note">BDI = [((1 + AC + S + G + R) × (1 + DF) × (1 + L)) ÷ (1 - I) - 1] × 100</p>
+        <h2>MemÃ³ria do BDI</h2>
+        <p class="proposal-note">BDI = [((1 + AC + S + G + R) Ã— (1 + DF) Ã— (1 + L)) Ã· (1 - I) - 1] Ã— 100</p>
         <table>
-          <thead><tr><th>Parâmetro</th><th>Percentual</th></tr></thead>
+          <thead><tr><th>ParÃ¢metro</th><th>Percentual</th></tr></thead>
           <tbody>${proposalRows(bdiRows)}</tbody>
         </table>
         <p class="proposal-note">IRPJ e CSLL ficam fora do BDI da proposta. Usar apenas tributos indiretos sobre receita.</p>
         <table>
-          <thead><tr><th>Item</th><th>Prática comum</th></tr></thead>
+          <thead><tr><th>Item</th><th>PrÃ¡tica comum</th></tr></thead>
           <tbody>${proposalRows(marketPracticeRows)}</tbody>
         </table>
       </section>
 
       <section>
-        <h2>Planilha orçamentária sintética</h2>
+        <h2>Planilha orÃ§amentÃ¡ria sintÃ©tica</h2>
         <table>
           <thead>
             <tr>
-              <th>Etapa</th><th>Código</th><th>Descrição</th><th>Un.</th><th>Qtd.</th><th>Preço unit.</th><th>Total c/ BDI</th>
+              <th>Etapa</th><th>CÃ³digo</th><th>DescriÃ§Ã£o</th><th>Un.</th><th>Qtd.</th><th>PreÃ§o unit.</th><th>Total c/ BDI</th>
             </tr>
           </thead>
           <tbody>
@@ -3060,9 +3105,9 @@ function buildProposalDocument() {
       </section>
 
       <section>
-        <h2>Itens críticos - Curva ABC</h2>
+        <h2>Itens crÃ­ticos - Curva ABC</h2>
         <table>
-          <thead><tr><th>Código</th><th>Descrição</th><th>Total</th><th>Participação</th><th>Classe</th></tr></thead>
+          <thead><tr><th>CÃ³digo</th><th>DescriÃ§Ã£o</th><th>Total</th><th>ParticipaÃ§Ã£o</th><th>Classe</th></tr></thead>
           <tbody>
             ${proposalRows(
               topAbc.map((item) => [
@@ -3079,8 +3124,8 @@ function buildProposalDocument() {
 
       <footer class="proposal-signature">
         <div>
-          <span>Assinatura do responsável técnico</span>
-          <strong>${escapeHtml(budget.bid.technicalOwner || "Responsável técnico")}</strong>
+          <span>Assinatura do responsÃ¡vel tÃ©cnico</span>
+          <strong>${escapeHtml(budget.bid.technicalOwner || "ResponsÃ¡vel tÃ©cnico")}</strong>
           <small>${escapeHtml(budget.bid.technicalRegistry || "Registro profissional")}</small>
         </div>
       </footer>
@@ -3097,9 +3142,9 @@ function generateProfessionalProposal() {
 
 function downloadCsvTemplate() {
   const rows = [
-    ["Etapa", "Código", "Descrição", "Unidade", "Quantidade", "Preço unitário sem BDI"],
+    ["Etapa", "CÃ³digo", "DescriÃ§Ã£o", "Unidade", "Quantidade", "PreÃ§o unitÃ¡rio sem BDI"],
     ["Rede coletora", "03.01", "Assentamento de tubo PVC Ocre DN 150 mm", "m", "100,00", "75,50"],
-    ["Poços de visita", "04.01", "Poço de visita em concreto armado", "un", "2,00", "3200,00"],
+    ["PoÃ§os de visita", "04.01", "PoÃ§o de visita em concreto armado", "un", "2,00", "3200,00"],
   ];
   const csv = rows.map((row) => row.map(csvCell).join(";")).join("\n");
 
@@ -3229,7 +3274,7 @@ function itemsFromSpreadsheetRows(rows) {
   const missingRequired = REQUIRED_IMPORT_COLUMNS.filter((field) => columns[field] === undefined);
 
   if (missingRequired.length) {
-    throw new Error("Não foi possível identificar descrição, unidade, quantidade e preço unitário. Verifique a planilha e tente novamente.");
+    throw new Error("NÃ£o foi possÃ­vel identificar descriÃ§Ã£o, unidade, quantidade e preÃ§o unitÃ¡rio. Verifique a planilha e tente novamente.");
   }
 
   return cleanRows
@@ -3271,7 +3316,7 @@ function uint32(view, offset) {
 
 async function inflateRaw(bytes) {
   if (!window.DecompressionStream) {
-    throw new Error("Este navegador não consegue ler Excel diretamente. Salve a planilha como CSV e tente novamente.");
+    throw new Error("Este navegador nÃ£o consegue ler Excel diretamente. Salve a planilha como CSV e tente novamente.");
   }
 
   const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream("deflate-raw"));
@@ -3291,7 +3336,7 @@ async function createZipReader(arrayBuffer) {
     }
   }
 
-  if (eocdOffset < 0) throw new Error("Não foi possível ler o arquivo Excel.");
+  if (eocdOffset < 0) throw new Error("NÃ£o foi possÃ­vel ler o arquivo Excel.");
 
   const entryCount = uint16(view, eocdOffset + 10);
   const centralDirectoryOffset = uint32(view, eocdOffset + 16);
@@ -3399,7 +3444,7 @@ async function parseXlsxTable(file) {
   const zipReader = await createZipReader(await file.arrayBuffer());
   const sheetPath = firstWorksheetPath(zipReader);
 
-  if (!sheetPath) throw new Error("Não foi possível encontrar uma aba de planilha no Excel.");
+  if (!sheetPath) throw new Error("NÃ£o foi possÃ­vel encontrar uma aba de planilha no Excel.");
 
   const [sheetXml, sharedStringsXml] = await Promise.all([
     zipReader.readText(sheetPath),
@@ -3415,7 +3460,7 @@ async function readBudgetImportItems(file) {
   const rows = isExcel ? await parseXlsxTable(file) : parseCsvTable(await file.text());
   const items = itemsFromSpreadsheetRows(rows);
 
-  if (!items.length) throw new Error("Nenhum item válido foi encontrado. Linhas sem descrição foram ignoradas.");
+  if (!items.length) throw new Error("Nenhum item vÃ¡lido foi encontrado. Linhas sem descriÃ§Ã£o foram ignoradas.");
   return items;
 }
 
@@ -3477,7 +3522,7 @@ function renderBudgetImportPreview(items, fileName) {
       .join("");
   }
 
-  setImportMessage(items.length > previewRows.length ? `Mostrando as primeiras ${previewRows.length} linhas na prévia.` : "", "success");
+  setImportMessage(items.length > previewRows.length ? `Mostrando as primeiras ${previewRows.length} linhas na prÃ©via.` : "", "success");
 }
 
 async function previewBudgetImportFile(file) {
@@ -3492,8 +3537,8 @@ async function previewBudgetImportFile(file) {
   } catch (error) {
     resetImportPreview();
     if (budgetImportFileName) budgetImportFileName.textContent = file.name;
-    setImportMessage(error?.message || "Não foi possível importar este arquivo.");
-    showToast("Não foi possível importar a planilha.");
+    setImportMessage(error?.message || "NÃ£o foi possÃ­vel importar este arquivo.");
+    showToast("NÃ£o foi possÃ­vel importar a planilha.");
   } finally {
     if (csvFileInput) csvFileInput.value = "";
   }
@@ -3533,7 +3578,7 @@ function importCsvFile(file) {
 
 function exportBackup() {
   const payload = {
-    product: "OrçaSan",
+    product: "OrÃ§aSan",
     version: 2,
     exportedAt: new Date().toISOString(),
     data: state,
@@ -3554,7 +3599,6 @@ function importBackupFile(file) {
       const parsed = JSON.parse(String(reader.result || "{}"));
       const incomingState = parsed.data || parsed;
       const normalized = normalizeState(incomingState);
-      const confirmed = window.confirm("Importar este backup? Os dados atuais neste navegador serão substituídos.");
 
       if (!confirmed) return;
 
@@ -3564,7 +3608,7 @@ function importBackupFile(file) {
       saveState();
       showToast("Backup importado.");
     } catch {
-      showToast("Não foi possível importar o backup.");
+      showToast("NÃ£o foi possÃ­vel importar o backup.");
     } finally {
       backupFileInput.value = "";
     }
@@ -3574,7 +3618,6 @@ function importBackupFile(file) {
 }
 
 function resetDemo() {
-  const confirmed = window.confirm("Restaurar os dados de exemplo? As alterações salvas neste navegador serão substituídas.");
   if (!confirmed) return;
 
   state = clone(defaultState);
