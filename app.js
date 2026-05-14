@@ -6,6 +6,26 @@ const ADMIN_MODE_KEY = "orcasan.admin-mode.v1";
 const DEFAULT_CLOUD_API_URL = "https://dtfvrjlmncrijniqskhv.supabase.co/rest/v1/";
 const DEFAULT_CLOUD_PUBLISHABLE_KEY = "sb_publishable_qr_f9x2Os79RHQG0XhX_4Q_1uh14LGe";
 const PUBLIC_APP_URL = "https://orcasan.vercel.app/";
+const REQUIRED_IMPORT_COLUMNS = ["description", "unit", "quantity", "unitPrice"];
+const IMPORT_COLUMN_ALIASES = {
+  description: ["descrição", "descricao", "serviço", "servico", "item", "objeto"],
+  unit: ["unidade", "un", "und"],
+  quantity: ["quantidade", "qtd", "qtde"],
+  unitPrice: [
+    "preco_unitario",
+    "preço unitário",
+    "preco unitario",
+    "valor unitário",
+    "valor unitario",
+    "preço",
+    "preco",
+    "valor",
+    "preço unitário sem bdi",
+    "preco unitario sem bdi",
+  ],
+  code: ["codigo", "código", "cod", "item", "ref", "referência", "referencia"],
+  stage: ["etapa", "categoria", "grupo", "fase"],
+};
 
 function defaultBid() {
   return {
@@ -155,8 +175,11 @@ const defaultState = {
 
 let state = loadState();
 let saveTimer;
+let cloudAutoSyncTimer;
+let isCloudSyncing = false;
 let bidStatusFilter = "Todas";
 let deferredInstallPrompt = null;
+let pendingBudgetImportItems = [];
 
 const BID_STATUSES = ["Em orçamento", "Em revisão", "Enviada", "Vencida", "Perdida"];
 
@@ -206,6 +229,17 @@ const resetTaxBdiButton = document.querySelector("#reset-tax-bdi");
 const downloadCsvTemplateButton = document.querySelector("#download-csv-template");
 const importCsvButton = document.querySelector("#import-csv");
 const csvFileInput = document.querySelector("#csv-file");
+const budgetImportModal = document.querySelector("#budget-import-modal");
+const closeBudgetImportButton = document.querySelector("#close-budget-import");
+const chooseBudgetImportFileButton = document.querySelector("#choose-budget-import-file");
+const changeBudgetImportFileButton = document.querySelector("#change-budget-import-file");
+const cancelBudgetImportButton = document.querySelector("#cancel-budget-import");
+const confirmBudgetImportButton = document.querySelector("#confirm-budget-import");
+const budgetImportFileName = document.querySelector("#budget-import-file-name");
+const budgetImportMessage = document.querySelector("#budget-import-message");
+const budgetImportPreview = document.querySelector("#budget-import-preview");
+const budgetImportSummary = document.querySelector("#budget-import-summary");
+const budgetImportPreviewBody = document.querySelector("#budget-import-preview-body");
 const saveButton = document.querySelector("#save-data");
 const resetButton = document.querySelector("#reset-demo");
 const exportButton = document.querySelector("#export-csv");
@@ -389,7 +423,7 @@ function activeItems() {
   return getActiveBudget().items;
 }
 
-function saveState(showFeedback = false) {
+function saveState(showFeedback = false, options = {}) {
   window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
 
   const now = new Intl.DateTimeFormat("pt-BR", {
@@ -399,12 +433,23 @@ function saveState(showFeedback = false) {
 
   saveStatus.textContent = `Salvo no navegador às ${now}`;
   if (showFeedback) showToast("Orçamento salvo.");
+
+  if (options.syncCloud !== false) scheduleCloudAutoSync();
 }
 
 function scheduleSave() {
   saveStatus.textContent = "Alterações pendentes...";
   window.clearTimeout(saveTimer);
   saveTimer = window.setTimeout(() => saveState(), 300);
+}
+
+function scheduleCloudAutoSync(delay = 1200) {
+  if (!hasAuthenticatedSession()) return;
+
+  window.clearTimeout(cloudAutoSyncTimer);
+  cloudAutoSyncTimer = window.setTimeout(() => {
+    syncActiveBudgetToCloud({ silent: true });
+  }, delay);
 }
 
 function showToast(message) {
@@ -1135,6 +1180,7 @@ async function signUpCloudAccount() {
     setAuthStatus("Conta criada com sucesso.", "success");
     showToast("Conta criada e conectada.");
     showPage("#dashboard");
+    syncActiveBudgetToCloud({ silent: true });
     return response;
   });
 }
@@ -1159,6 +1205,7 @@ async function signInCloudAccount() {
     setAuthStatus("Acesso confirmado.", "success");
     showToast("Conta conectada.");
     showPage("#dashboard");
+    syncActiveBudgetToCloud({ silent: true });
     return response;
   });
 }
@@ -1501,12 +1548,40 @@ async function replaceCloudCompositions(organizationId) {
   });
 }
 
-async function syncActiveBudgetToCloud() {
-  return runCloudAction("Enviando licitação atual para a nuvem...", "Licitação enviada para a nuvem.", async () => {
-    const organization = await ensureCloudOrganization();
-    await saveBudgetToCloud(getActiveBudget(), organization);
-    saveState();
-  });
+async function persistActiveBudgetToCloud() {
+  const organization = await ensureCloudOrganization();
+  await saveBudgetToCloud(getActiveBudget(), organization);
+  saveState(false, { syncCloud: false });
+}
+
+async function syncActiveBudgetToCloud(options = {}) {
+  const { silent = false } = options;
+
+  if (!hasAuthenticatedSession()) return null;
+  if (isCloudSyncing) return null;
+
+  window.clearTimeout(cloudAutoSyncTimer);
+  isCloudSyncing = true;
+
+  if (silent) {
+    try {
+      await persistActiveBudgetToCloud();
+      setCloudStatus("Dados sincronizados com a nuvem.", "success");
+      return true;
+    } catch (error) {
+      console.error(error);
+      setCloudStatus(supabaseErrorMessage(error), "error");
+      return null;
+    } finally {
+      isCloudSyncing = false;
+    }
+  }
+
+  try {
+    return await runCloudAction("Enviando licitação atual para a nuvem...", "Licitação enviada para a nuvem.", persistActiveBudgetToCloud);
+  } finally {
+    isCloudSyncing = false;
+  }
 }
 
 async function syncAllDataToCloud() {
@@ -1518,7 +1593,7 @@ async function syncAllDataToCloud() {
     }
 
     await replaceCloudCompositions(organization.id);
-    saveState();
+    saveState(false, { syncCloud: false });
     render();
   });
 }
@@ -1678,7 +1753,30 @@ function escapeHtml(value) {
 }
 
 function parseNumber(value) {
-  const normalized = String(value ?? "").replace(",", ".");
+  if (typeof value === "number") return Number.isFinite(value) ? value : 0;
+
+  let normalized = String(value ?? "")
+    .trim()
+    .replace(/\s/g, "")
+    .replace(/R\$/gi, "")
+    .replace(/[^\d,.-]/g, "");
+
+  if (!normalized) return 0;
+
+  const hasComma = normalized.includes(",");
+  const hasDot = normalized.includes(".");
+
+  if (hasComma && hasDot) {
+    const lastComma = normalized.lastIndexOf(",");
+    const lastDot = normalized.lastIndexOf(".");
+    normalized =
+      lastComma > lastDot
+        ? normalized.replace(/\./g, "").replace(",", ".")
+        : normalized.replace(/,/g, "");
+  } else if (hasComma) {
+    normalized = normalized.replace(/\./g, "").replace(",", ".");
+  }
+
   const parsed = Number(normalized);
   return Number.isFinite(parsed) ? parsed : 0;
 }
@@ -3002,7 +3100,7 @@ function splitCsvLine(line, separator) {
   return values;
 }
 
-function parseCsv(text) {
+function parseCsvTable(text) {
   const cleanText = String(text || "").replace(/^\uFEFF/, "");
   const lines = cleanText
     .split(/\r?\n/)
@@ -3012,11 +3110,19 @@ function parseCsv(text) {
   if (lines.length < 2) return [];
 
   const firstLine = lines[0];
-  const separator = firstLine.includes(";") ? ";" : ",";
-  const headers = splitCsvLine(firstLine, separator).map(normalizeHeader);
+  const semicolonCount = (firstLine.match(/;/g) || []).length;
+  const commaCount = (firstLine.match(/,/g) || []).length;
+  const separator = semicolonCount >= commaCount ? ";" : ",";
 
-  return lines.slice(1).map((line) => {
-    const values = splitCsvLine(line, separator);
+  return lines.map((line) => splitCsvLine(line, separator));
+}
+
+function rowsToObjects(rows) {
+  if (!rows.length) return [];
+
+  const headers = rows[0].map(normalizeHeader);
+
+  return rows.slice(1).map((values) => {
     return headers.reduce((row, header, index) => {
       row[header] = values[index] || "";
       return row;
@@ -3024,28 +3130,90 @@ function parseCsv(text) {
   });
 }
 
+function parseCsv(text) {
+  return rowsToObjects(parseCsvTable(text));
+}
+
 function valueFromRow(row, possibleHeaders) {
   const key = possibleHeaders.map(normalizeHeader).find((header) => row[header] !== undefined);
   return key ? row[key] : "";
 }
 
-function itemsFromCsvRows(rows) {
-  return rows
-    .map((row, index) => {
-      const description = valueFromRow(row, ["descrição", "descricao", "serviço", "servico", "item"]);
-      const quantity = parseNumber(valueFromRow(row, ["quantidade", "qtd", "qtde"]));
-      const unitPrice = parseNumber(
-        valueFromRow(row, ["preço unitário sem bdi", "preco unitario sem bdi", "preço unitário", "preco unitario", "valor unitario"]),
-      );
+function findImportColumn(headers, aliases, usedIndexes = new Set()) {
+  const normalizedAliases = aliases.map(normalizeHeader);
 
-      if (!description && !quantity && !unitPrice) return null;
+  for (const alias of normalizedAliases) {
+    const exactIndex = headers.findIndex((header, index) => !usedIndexes.has(index) && header === alias);
+    if (exactIndex >= 0) return exactIndex;
+  }
+
+  for (const alias of normalizedAliases) {
+    const similarIndex = headers.findIndex(
+      (header, index) =>
+        !usedIndexes.has(index) &&
+        alias.length >= 4 &&
+        header.length >= 4 &&
+        (header.includes(alias) || alias.includes(header)),
+    );
+    if (similarIndex >= 0) return similarIndex;
+  }
+
+  return -1;
+}
+
+function detectImportColumns(headerRow) {
+  const headers = headerRow.map(normalizeHeader);
+  const usedIndexes = new Set();
+  const columns = {};
+
+  ["description", "unit", "quantity", "unitPrice", "code", "stage"].forEach((field) => {
+    const index = findImportColumn(headers, IMPORT_COLUMN_ALIASES[field], usedIndexes);
+    if (index >= 0) {
+      columns[field] = index;
+      usedIndexes.add(index);
+    }
+  });
+
+  return columns;
+}
+
+function importValue(row, index) {
+  if (index === undefined || index < 0) return "";
+  return String(row[index] ?? "").trim();
+}
+
+function cleanSpreadsheetRows(rows) {
+  return rows
+    .map((row) => row.map((cell) => String(cell ?? "").trim()))
+    .filter((row) => row.some(Boolean));
+}
+
+function itemsFromSpreadsheetRows(rows) {
+  const cleanRows = cleanSpreadsheetRows(rows);
+  if (cleanRows.length < 2) return [];
+
+  const columns = detectImportColumns(cleanRows[0]);
+  const missingRequired = REQUIRED_IMPORT_COLUMNS.filter((field) => columns[field] === undefined);
+
+  if (missingRequired.length) {
+    throw new Error("Não foi possível identificar descrição, unidade, quantidade e preço unitário. Verifique a planilha e tente novamente.");
+  }
+
+  return cleanRows
+    .slice(1)
+    .map((row, index) => {
+      const description = importValue(row, columns.description);
+      if (!description) return null;
+
+      const quantity = parseNumber(importValue(row, columns.quantity));
+      const unitPrice = parseNumber(importValue(row, columns.unitPrice));
 
       return {
         id: createId(),
-        stage: valueFromRow(row, ["etapa", "grupo", "fase"]) || "Importado do CSV",
-        code: valueFromRow(row, ["código", "codigo", "cod"]) || `IMP-${String(index + 1).padStart(3, "0")}`,
-        description: description || "Item importado sem descrição",
-        unit: valueFromRow(row, ["unidade", "un", "und"]) || "un",
+        stage: importValue(row, columns.stage) || "Importado da planilha",
+        code: importValue(row, columns.code) || `IMP-${String(index + 1).padStart(3, "0")}`,
+        description,
+        unit: importValue(row, columns.unit) || "un",
         quantity,
         unitPrice,
       };
@@ -3053,35 +3221,281 @@ function itemsFromCsvRows(rows) {
     .filter(Boolean);
 }
 
-function importCsvFile(file) {
+function itemsFromCsvRows(rows) {
+  return itemsFromSpreadsheetRows([
+    Object.keys(rows[0] || {}),
+    ...rows.map((row) => Object.keys(rows[0] || {}).map((key) => row[key])),
+  ]);
+}
+
+function uint16(view, offset) {
+  return view.getUint16(offset, true);
+}
+
+function uint32(view, offset) {
+  return view.getUint32(offset, true);
+}
+
+async function inflateRaw(bytes) {
+  if (!window.DecompressionStream) {
+    throw new Error("Este navegador não consegue ler Excel diretamente. Salve a planilha como CSV e tente novamente.");
+  }
+
+  const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream("deflate-raw"));
+  return new Uint8Array(await new Response(stream).arrayBuffer());
+}
+
+async function createZipReader(arrayBuffer) {
+  const bytes = new Uint8Array(arrayBuffer);
+  const view = new DataView(arrayBuffer);
+  const minOffset = Math.max(0, bytes.length - 65558);
+  let eocdOffset = -1;
+
+  for (let offset = bytes.length - 22; offset >= minOffset; offset -= 1) {
+    if (uint32(view, offset) === 0x06054b50) {
+      eocdOffset = offset;
+      break;
+    }
+  }
+
+  if (eocdOffset < 0) throw new Error("Não foi possível ler o arquivo Excel.");
+
+  const entryCount = uint16(view, eocdOffset + 10);
+  const centralDirectoryOffset = uint32(view, eocdOffset + 16);
+  const entries = new Map();
+  let offset = centralDirectoryOffset;
+
+  for (let index = 0; index < entryCount; index += 1) {
+    if (uint32(view, offset) !== 0x02014b50) break;
+
+    const method = uint16(view, offset + 10);
+    const compressedSize = uint32(view, offset + 20);
+    const fileNameLength = uint16(view, offset + 28);
+    const extraLength = uint16(view, offset + 30);
+    const commentLength = uint16(view, offset + 32);
+    const localHeaderOffset = uint32(view, offset + 42);
+    const nameBytes = bytes.slice(offset + 46, offset + 46 + fileNameLength);
+    const name = new TextDecoder().decode(nameBytes).replace(/\\/g, "/");
+
+    entries.set(name, {
+      method,
+      compressedSize,
+      localHeaderOffset,
+    });
+
+    offset += 46 + fileNameLength + extraLength + commentLength;
+  }
+
+  return {
+    names: [...entries.keys()],
+    async readText(name) {
+      const entry = entries.get(name);
+      if (!entry) return "";
+
+      const localOffset = entry.localHeaderOffset;
+      if (uint32(view, localOffset) !== 0x04034b50) return "";
+
+      const fileNameLength = uint16(view, localOffset + 26);
+      const extraLength = uint16(view, localOffset + 28);
+      const dataOffset = localOffset + 30 + fileNameLength + extraLength;
+      const compressed = bytes.slice(dataOffset, dataOffset + entry.compressedSize);
+      const content = entry.method === 0 ? compressed : await inflateRaw(compressed);
+
+      return new TextDecoder("utf-8").decode(content);
+    },
+  };
+}
+
+function parseXml(text) {
+  return new DOMParser().parseFromString(text, "application/xml");
+}
+
+function parseSharedStrings(xmlText) {
+  if (!xmlText) return [];
+
+  const xml = parseXml(xmlText);
+  return [...xml.getElementsByTagName("si")].map((item) =>
+    [...item.getElementsByTagName("t")].map((textNode) => textNode.textContent || "").join(""),
+  );
+}
+
+function columnIndexFromCellRef(ref) {
+  const letters = String(ref || "").match(/^[A-Z]+/i)?.[0] || "";
+  if (!letters) return -1;
+
+  return [...letters.toUpperCase()].reduce((total, letter) => total * 26 + letter.charCodeAt(0) - 64, 0) - 1;
+}
+
+function cellText(cell, sharedStrings) {
+  const type = cell.getAttribute("t");
+
+  if (type === "inlineStr") {
+    return [...cell.getElementsByTagName("t")].map((node) => node.textContent || "").join("");
+  }
+
+  const value = cell.getElementsByTagName("v")[0]?.textContent || "";
+  if (type === "s") return sharedStrings[Number(value)] || "";
+  return value;
+}
+
+function rowsFromWorksheetXml(xmlText, sharedStrings) {
+  const xml = parseXml(xmlText);
+
+  return [...xml.getElementsByTagName("row")].map((row) => {
+    const values = [];
+    let nextColumn = 0;
+
+    [...row.getElementsByTagName("c")].forEach((cell) => {
+      const columnIndex = columnIndexFromCellRef(cell.getAttribute("r"));
+      const finalIndex = columnIndex >= 0 ? columnIndex : nextColumn;
+      values[finalIndex] = cellText(cell, sharedStrings);
+      nextColumn = finalIndex + 1;
+    });
+
+    return values;
+  });
+}
+
+function firstWorksheetPath(zipReader) {
+  return zipReader.names
+    .filter((name) => /^xl\/worksheets\/sheet\d+\.xml$/i.test(name))
+    .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }))[0];
+}
+
+async function parseXlsxTable(file) {
+  const zipReader = await createZipReader(await file.arrayBuffer());
+  const sheetPath = firstWorksheetPath(zipReader);
+
+  if (!sheetPath) throw new Error("Não foi possível encontrar uma aba de planilha no Excel.");
+
+  const [sheetXml, sharedStringsXml] = await Promise.all([
+    zipReader.readText(sheetPath),
+    zipReader.readText("xl/sharedStrings.xml"),
+  ]);
+
+  return rowsFromWorksheetXml(sheetXml, parseSharedStrings(sharedStringsXml));
+}
+
+async function readBudgetImportItems(file) {
+  const fileName = String(file?.name || "").toLowerCase();
+  const isExcel = fileName.endsWith(".xlsx") || file?.type === "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+  const rows = isExcel ? await parseXlsxTable(file) : parseCsvTable(await file.text());
+  const items = itemsFromSpreadsheetRows(rows);
+
+  if (!items.length) throw new Error("Nenhum item válido foi encontrado. Linhas sem descrição foram ignoradas.");
+  return items;
+}
+
+function setImportMessage(message = "", kind = "error") {
+  if (!budgetImportMessage) return;
+
+  budgetImportMessage.hidden = !message;
+  budgetImportMessage.textContent = message;
+  budgetImportMessage.classList.toggle("success", kind === "success");
+}
+
+function resetImportPreview() {
+  pendingBudgetImportItems = [];
+  if (budgetImportFileName) budgetImportFileName.textContent = "Nenhum arquivo selecionado";
+  if (budgetImportPreview) budgetImportPreview.hidden = true;
+  if (budgetImportPreviewBody) budgetImportPreviewBody.innerHTML = "";
+  if (budgetImportSummary) budgetImportSummary.textContent = "0 item selecionado";
+  if (confirmBudgetImportButton) confirmBudgetImportButton.disabled = true;
+  setImportMessage("");
+}
+
+function openBudgetImportModal() {
+  resetImportPreview();
+  if (budgetImportModal) budgetImportModal.hidden = false;
+}
+
+function closeBudgetImportModal() {
+  if (budgetImportModal) budgetImportModal.hidden = true;
+  resetImportPreview();
+}
+
+function renderBudgetImportPreview(items, fileName) {
+  pendingBudgetImportItems = items;
+  const totalPreview = items.reduce((sum, item) => sum + parseNumber(item.quantity) * parseNumber(item.unitPrice), 0);
+  const previewRows = items.slice(0, 80);
+
+  if (budgetImportFileName) budgetImportFileName.textContent = fileName;
+  if (budgetImportPreview) budgetImportPreview.hidden = false;
+  if (budgetImportSummary) {
+    budgetImportSummary.textContent = `${items.length} item(ns) reconhecido(s), total estimado de ${toCurrency(totalPreview)}.`;
+  }
+  if (confirmBudgetImportButton) confirmBudgetImportButton.disabled = !items.length;
+  if (budgetImportPreviewBody) {
+    budgetImportPreviewBody.innerHTML = previewRows
+      .map((item) => {
+        const total = parseNumber(item.quantity) * parseNumber(item.unitPrice);
+        return `
+          <tr>
+            <td>${escapeHtml(item.code)}</td>
+            <td>${escapeHtml(item.stage)}</td>
+            <td>${escapeHtml(item.description)}</td>
+            <td>${escapeHtml(item.unit)}</td>
+            <td>${percentFormatter.format(parseNumber(item.quantity))}</td>
+            <td>${toCurrency(item.unitPrice)}</td>
+            <td>${toCurrency(total)}</td>
+          </tr>
+        `;
+      })
+      .join("");
+  }
+
+  setImportMessage(items.length > previewRows.length ? `Mostrando as primeiras ${previewRows.length} linhas na prévia.` : "", "success");
+}
+
+async function previewBudgetImportFile(file) {
   if (!file) return;
 
-  const reader = new FileReader();
+  setImportMessage("Lendo planilha...", "success");
+  if (confirmBudgetImportButton) confirmBudgetImportButton.disabled = true;
 
-  reader.addEventListener("load", () => {
-    try {
-      const rows = parseCsv(reader.result);
-      const importedItems = itemsFromCsvRows(rows);
+  try {
+    const items = await readBudgetImportItems(file);
+    renderBudgetImportPreview(items, file.name);
+  } catch (error) {
+    resetImportPreview();
+    if (budgetImportFileName) budgetImportFileName.textContent = file.name;
+    setImportMessage(error?.message || "Não foi possível importar este arquivo.");
+    showToast("Não foi possível importar a planilha.");
+  } finally {
+    if (csvFileInput) csvFileInput.value = "";
+  }
+}
 
-      if (!importedItems.length) {
-        showToast("Nenhum item válido encontrado no CSV.");
-        return;
-      }
+async function confirmBudgetImport() {
+  if (!pendingBudgetImportItems.length) return;
 
-      activeItems().push(...importedItems);
-      hydrateForm();
-      render();
-      saveState();
-      showToast(`${importedItems.length} item(ns) importado(s).`);
-      showPage("#orcamento");
-    } catch {
-      showToast("Não foi possível importar este CSV.");
-    } finally {
-      csvFileInput.value = "";
-    }
-  });
+  const currentItems = activeItems();
+  const importedItems = pendingBudgetImportItems.map((item, index) =>
+    normalizeItem(
+      {
+        ...item,
+        id: createId(),
+      },
+      currentItems.length + index,
+    ),
+  );
 
-  reader.readAsText(file, "utf-8");
+  currentItems.push(...importedItems);
+  hydrateForm();
+  render();
+  saveState(true);
+  closeBudgetImportModal();
+  showPage("#orcamento");
+  showToast(`${importedItems.length} item(ns) importado(s).`);
+
+  if (hasAuthenticatedSession()) {
+    await syncActiveBudgetToCloud();
+  }
+}
+
+function importCsvFile(file) {
+  if (!file) return;
+  previewBudgetImportFile(file);
 }
 
 function exportBackup() {
@@ -3280,7 +3694,15 @@ addItemButton.addEventListener("click", addItem);
 addCompositionButton.addEventListener("click", addComposition);
 resetTaxBdiButton?.addEventListener("click", resetOutOfBdiTaxes);
 downloadCsvTemplateButton.addEventListener("click", downloadCsvTemplate);
-importCsvButton.addEventListener("click", () => csvFileInput.click());
+importCsvButton.addEventListener("click", openBudgetImportModal);
+chooseBudgetImportFileButton?.addEventListener("click", () => csvFileInput.click());
+changeBudgetImportFileButton?.addEventListener("click", () => csvFileInput.click());
+cancelBudgetImportButton?.addEventListener("click", closeBudgetImportModal);
+closeBudgetImportButton?.addEventListener("click", closeBudgetImportModal);
+confirmBudgetImportButton?.addEventListener("click", confirmBudgetImport);
+budgetImportModal?.addEventListener("click", (event) => {
+  if (event.target === budgetImportModal) closeBudgetImportModal();
+});
 csvFileInput.addEventListener("change", (event) => importCsvFile(event.target.files[0]));
 saveButton.addEventListener("click", () => saveState(true));
 resetButton.addEventListener("click", resetDemo);
@@ -3319,6 +3741,7 @@ logoutConfirmation?.addEventListener("click", (event) => {
 });
 window.addEventListener("keydown", (event) => {
   if (event.key === "Escape" && logoutConfirmation && !logoutConfirmation.hidden) closeLogoutConfirmation();
+  if (event.key === "Escape" && budgetImportModal && !budgetImportModal.hidden) closeBudgetImportModal();
 });
 reportList.addEventListener("click", (event) => {
   const button = event.target.closest("[data-report-action]");

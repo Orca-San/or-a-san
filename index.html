@@ -492,9 +492,9 @@
             </div>
             <div class="panel-actions">
               <button class="ghost-button compact" id="download-csv-template" type="button">Modelo CSV</button>
-              <button class="ghost-button compact" id="import-csv" type="button">Importar CSV</button>
+              <button class="ghost-button compact" id="import-csv" type="button">Importar planilha</button>
               <button class="ghost-button compact" id="add-item" type="button">Adicionar item</button>
-              <input id="csv-file" type="file" accept=".csv,text/csv" hidden />
+              <input id="csv-file" type="file" accept=".csv,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" hidden />
             </div>
           </div>
 
@@ -714,6 +714,59 @@
     </div>
 
     <section class="proposal-print" id="proposal-print" hidden></section>
+    <div class="import-overlay" id="budget-import-modal" role="dialog" aria-modal="true" aria-labelledby="budget-import-title" hidden>
+      <div class="import-dialog">
+        <div class="import-header">
+          <div>
+            <p class="eyebrow">Importação</p>
+            <h2 id="budget-import-title">Importar itens do orçamento</h2>
+            <p>Importe uma planilha com descrição, unidade, quantidade e preço unitário.</p>
+          </div>
+          <button class="icon-button" id="close-budget-import" type="button" aria-label="Fechar importação">×</button>
+        </div>
+
+        <div class="import-upload">
+          <div>
+            <strong id="budget-import-file-name">Nenhum arquivo selecionado</strong>
+            <span>Formatos aceitos: CSV ou Excel (.xlsx)</span>
+          </div>
+          <button class="ghost-button" id="choose-budget-import-file" type="button">Escolher arquivo</button>
+        </div>
+
+        <span class="import-message" id="budget-import-message" hidden></span>
+
+        <div class="import-preview" id="budget-import-preview" hidden>
+          <div class="import-preview-header">
+            <div>
+              <strong>Pré-visualização</strong>
+              <span id="budget-import-summary">0 item selecionado</span>
+            </div>
+            <button class="ghost-button compact" id="change-budget-import-file" type="button">Escolher outro arquivo</button>
+          </div>
+          <div class="import-preview-wrap">
+            <table class="import-preview-table">
+              <thead>
+                <tr>
+                  <th>Código</th>
+                  <th>Etapa</th>
+                  <th>Descrição</th>
+                  <th>Unidade</th>
+                  <th>Quantidade</th>
+                  <th>Preço unitário</th>
+                  <th>Total estimado</th>
+                </tr>
+              </thead>
+              <tbody id="budget-import-preview-body"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="import-actions">
+          <button class="ghost-button" id="cancel-budget-import" type="button">Cancelar</button>
+          <button class="primary-button" id="confirm-budget-import" type="button" disabled>Confirmar importação</button>
+        </div>
+      </div>
+    </div>
     <div class="confirm-overlay" id="logout-confirmation" role="dialog" aria-modal="true" aria-labelledby="logout-confirmation-title" hidden>
       <div class="confirm-dialog">
         <p class="eyebrow">Conta</p>

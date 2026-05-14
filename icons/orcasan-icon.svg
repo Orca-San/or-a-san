@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">OrçaSan</title>
+  <desc id="desc">Ícone do aplicativo OrçaSan</desc>
+  <rect width="512" height="512" rx="96" fill="#0f766e"/>
+  <path d="M144 320c52 0 74-29 100-70 28-44 55-76 124-76" fill="none" stroke="#e7f7f3" stroke-width="42" stroke-linecap="round"/>
+  <path d="M144 382h224" fill="none" stroke="#f2bd59" stroke-width="42" stroke-linecap="round"/>
+  <circle cx="144" cy="320" r="28" fill="#f2bd59"/>
+  <circle cx="368" cy="174" r="28" fill="#e7f7f3"/>
+  <text x="256" y="286" text-anchor="middle" fill="#ffffff" font-family="Arial, sans-serif" font-size="106" font-weight="800">OS</text>
+</svg>
