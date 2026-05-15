@@ -296,13 +296,68 @@ function createId() {
   return `id-${Date.now()}-${Math.round(Math.random() * 1000)}`;
 }
 
+const CP1252_BYTE_BY_CODE_POINT = new Map([
+  [0x20ac, 0x80],
+  [0x201a, 0x82],
+  [0x0192, 0x83],
+  [0x201e, 0x84],
+  [0x2026, 0x85],
+  [0x2020, 0x86],
+  [0x2021, 0x87],
+  [0x02c6, 0x88],
+  [0x2030, 0x89],
+  [0x0160, 0x8a],
+  [0x2039, 0x8b],
+  [0x0152, 0x8c],
+  [0x017d, 0x8e],
+  [0x2018, 0x91],
+  [0x2019, 0x92],
+  [0x201c, 0x93],
+  [0x201d, 0x94],
+  [0x2022, 0x95],
+  [0x2013, 0x96],
+  [0x2014, 0x97],
+  [0x02dc, 0x98],
+  [0x2122, 0x99],
+  [0x0161, 0x9a],
+  [0x203a, 0x9b],
+  [0x0153, 0x9c],
+  [0x017e, 0x9e],
+  [0x0178, 0x9f],
+]);
+
+function hasMojibakeText(value) {
+  return /(?:Ã|Â|â[€œ€¢“”–—])/u.test(String(value || ""));
+}
+
+function repairTextEncoding(value) {
+  if (typeof value !== "string" || !hasMojibakeText(value) || typeof TextDecoder === "undefined") return value;
+
+  const bytes = [];
+
+  for (const char of value) {
+    const codePoint = char.codePointAt(0);
+    const byte = CP1252_BYTE_BY_CODE_POINT.get(codePoint) ?? (codePoint <= 0xff ? codePoint : null);
+
+    if (byte === null) return value;
+    bytes.push(byte);
+  }
+
+  const repaired = new TextDecoder("utf-8").decode(new Uint8Array(bytes));
+  return repaired.includes("\uFFFD") ? value : repaired;
+}
+
+function cleanText(value, fallback = "") {
+  return repairTextEncoding(String(value ?? fallback));
+}
+
 function normalizeItem(item, index) {
   return {
     id: item.id || `item-${String(index + 1).padStart(2, "0")}`,
-    stage: item.stage || "",
-    code: item.code || "",
-    description: item.description || "",
-    unit: item.unit || "un",
+    stage: cleanText(item.stage),
+    code: cleanText(item.code),
+    description: cleanText(item.description),
+    unit: cleanText(item.unit, "un") || "un",
     quantity: Number(item.quantity) || 0,
     unitPrice: Number(item.unitPrice) || 0,
   };
@@ -311,11 +366,11 @@ function normalizeItem(item, index) {
 function normalizeComposition(composition, index) {
   return {
     id: composition.id || `composition-${String(index + 1).padStart(2, "0")}`,
-    code: composition.code || "",
-    title: composition.title || "",
-    unit: composition.unit || "un",
+    code: cleanText(composition.code),
+    title: cleanText(composition.title),
+    unit: cleanText(composition.unit, "un") || "un",
     cost: Number(composition.cost) || 0,
-    note: composition.note || "",
+    note: cleanText(composition.note),
   };
 }
 
@@ -346,8 +401,8 @@ function normalizeBudget(rawBudget, index) {
     cloudBidId: source.cloudBidId || "",
     createdAt: source.createdAt || new Date().toISOString(),
     bid: {
-      ...base.bid,
-      ...(source.bid || {}),
+      ...Object.fromEntries(Object.entries(base.bid).map(([key, value]) => [key, cleanText(value)])),
+      ...Object.fromEntries(Object.entries(source.bid || {}).map(([key, value]) => [key, typeof value === "string" ? cleanText(value) : value])),
     },
     bdi: normalizeBdi(source.bdi),
     items: items.map(normalizeItem),
@@ -440,6 +495,40 @@ function clearDuplicateCloudBidIds() {
 
     seenCloudIds.add(budget.cloudBidId);
   });
+}
+
+function syncKey(value) {
+  return cleanText(value)
+    .trim()
+    .toLocaleLowerCase("pt-BR")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\s+/g, " ");
+}
+
+function budgetFingerprint(budget) {
+  const bid = budget?.bid || {};
+  const edital = syncKey(bid.editalNumber);
+  const agency = syncKey(bid.agency);
+  const title = syncKey(bid.title);
+  const location = syncKey(bid.location);
+
+  if (edital) return `edital:${edital}|agency:${agency}`;
+  if (title) return `title:${title}|agency:${agency}|location:${location}`;
+
+  return "";
+}
+
+function cloudBidFingerprint(row) {
+  const edital = syncKey(row?.edital_number);
+  const agency = syncKey(row?.agency);
+  const title = syncKey(row?.title);
+  const location = syncKey(row?.location);
+
+  if (edital) return `edital:${edital}|agency:${agency}`;
+  if (title) return `title:${title}|agency:${agency}|location:${location}`;
+
+  return "";
 }
 
 function saveState(showFeedback = false, options = {}) {
@@ -1604,6 +1693,33 @@ async function replaceCloudCompositions(organizationId) {
   });
 }
 
+async function cloudBidLookupForOrganization(organizationId) {
+  const rows = await supabaseRequest(
+    `bids?organization_id=eq.${encodeURIComponent(organizationId)}&select=*&order=updated_at.desc,created_at.desc`,
+    { prefer: "" },
+  );
+  const byId = new Map();
+  const byFingerprint = new Map();
+
+  (rows || []).forEach((row) => {
+    if (row.id) byId.set(row.id, row);
+
+    const fingerprint = cloudBidFingerprint(row);
+    if (fingerprint && !byFingerprint.has(fingerprint)) byFingerprint.set(fingerprint, row);
+  });
+
+  return { byId, byFingerprint };
+}
+
+function attachExistingCloudBidIds(budgets, lookup) {
+  budgets.forEach((budget) => {
+    if (budget.cloudBidId && lookup.byId.has(budget.cloudBidId)) return;
+
+    const existing = lookup.byFingerprint.get(budgetFingerprint(budget));
+    budget.cloudBidId = existing?.id || "";
+  });
+}
+
 async function persistActiveBudgetToCloud() {
   const organization = await ensureCloudOrganization();
   await saveBudgetToCloud(getActiveBudget(), organization);
@@ -1643,6 +1759,7 @@ async function syncActiveBudgetToCloud(options = {}) {
 async function persistAllDataToCloud() {
   const organization = await ensureCloudOrganization();
   clearDuplicateCloudBidIds();
+  attachExistingCloudBidIds(state.budgets, await cloudBidLookupForOrganization(organization.id));
 
   for (const budget of state.budgets) {
     await saveBudgetToCloud(budget, organization);
@@ -1787,6 +1904,18 @@ function mapCloudComposition(row, index) {
   );
 }
 
+function dedupeCloudBids(rows) {
+  const seen = new Set();
+
+  return (rows || []).filter((row) => {
+    const fingerprint = cloudBidFingerprint(row) || `id:${row.id}`;
+    if (seen.has(fingerprint)) return false;
+
+    seen.add(fingerprint);
+    return true;
+  });
+}
+
 async function persistCloudDataToLocal() {
   const organizations = await supabaseRequest("organizations?select=*&order=created_at.desc", {
     prefer: "",
@@ -1802,12 +1931,12 @@ async function persistCloudDataToLocal() {
   });
 
   const organizationsById = new Map(organizationList.map((organization) => [organization.id, organization]));
-  const cloudBids = await supabaseRequest("bids?select=*&order=created_at.desc", {
+  const cloudBids = await supabaseRequest("bids?select=*&order=updated_at.desc,created_at.desc", {
     prefer: "",
   });
   const budgets = [];
 
-  for (const [index, cloudBid] of (cloudBids || []).entries()) {
+  for (const [index, cloudBid] of dedupeCloudBids(cloudBids).entries()) {
     const organization = organizationsById.get(cloudBid.organization_id) || organizationList[0];
     const [bdiRows, itemRows] = await Promise.all([
       supabaseRequest(`bdi_settings?bid_id=eq.${encodeURIComponent(cloudBid.id)}&select=*&limit=1`, {
@@ -1867,6 +1996,15 @@ async function loadDataFromCloud(options = {}) {
   }
 
   return runCloudAction("Carregando dados da nuvem...", "Dados carregados da nuvem.", persistCloudDataToLocal);
+}
+
+async function deleteCloudBudgetById(cloudBidId) {
+  if (!cloudBidId || !hasAuthenticatedSession()) return;
+
+  await supabaseRequest(`bids?id=eq.${encodeURIComponent(cloudBidId)}`, {
+    method: "DELETE",
+    prefer: "return=minimal",
+  });
 }
 
 function escapeHtml(value) {
@@ -2759,14 +2897,27 @@ function duplicateBudget(id) {
   showToast("Licitação duplicada.");
 }
 
-function deleteBudget(id) {
+async function deleteBudget(id) {
   if (state.budgets.length <= 1) {
     showToast("Mantenha pelo menos uma licitação.");
     return;
   }
 
   const target = state.budgets.find((budget) => budget.id === id);
+  if (!target) return;
+
+  const confirmed = window.confirm(`Excluir a licitação "${target.bid.title || "sem nome"}"?`);
   if (!confirmed) return;
+
+  if (target.cloudBidId && hasAuthenticatedSession()) {
+    try {
+      await deleteCloudBudgetById(target.cloudBidId);
+    } catch (error) {
+      console.error(error);
+      showToast("Não foi possível excluir a licitação na nuvem.");
+      return;
+    }
+  }
 
   state.budgets = state.budgets.filter((budget) => budget.id !== id);
 
@@ -3731,12 +3882,22 @@ bidsList.addEventListener("click", (event) => {
   const duplicateButton = event.target.closest("[data-duplicate-budget]");
   const deleteButton = event.target.closest("[data-delete-budget]");
 
+  if (deleteButton) {
+    event.preventDefault();
+    deleteBudget(deleteButton.dataset.deleteBudget);
+    return;
+  }
+
+  if (duplicateButton) {
+    event.preventDefault();
+    duplicateBudget(duplicateButton.dataset.duplicateBudget);
+    return;
+  }
+
   if (selectButton) {
     selectBudget(selectButton.dataset.selectBudget);
     showPage("#orcamento");
   }
-  if (duplicateButton) duplicateBudget(duplicateButton.dataset.duplicateBudget);
-  if (deleteButton) deleteBudget(deleteButton.dataset.deleteBudget);
 });
 
 function applyBidStatusFilter(status) {
