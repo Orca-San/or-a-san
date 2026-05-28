@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="pt-BR">
   <head>
-    <meta charset="utf-8" />
+    <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>OrçaSan | Orçamentos de Saneamento</title>
     <meta name="theme-color" content="#0f766e" />
@@ -12,7 +12,7 @@
     <link rel="manifest" href="manifest.webmanifest" />
     <link rel="icon" href="icons/orcasan-icon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="icons/orcasan-icon-192.png" />
-    <link rel="stylesheet" href="styles.css?v=40" />
+    <link rel="stylesheet" href="styles.css?v=41" />
   </head>
   <body>
     <section class="auth-screen" id="auth-screen" hidden>
@@ -662,6 +662,19 @@
               </div>
             </article>
 
+            <article class="settings-card" id="encoding-tools" hidden>
+              <div class="settings-card-header">
+                <div>
+                  <p class="eyebrow">Dados</p>
+                  <h3>Acentuação</h3>
+                </div>
+              </div>
+              <p class="settings-note" id="encoding-status">Encontramos textos com acentuação quebrada nos dados carregados.</p>
+              <div class="settings-actions-list">
+                <button class="ghost-button compact" id="fix-loaded-encoding" type="button">Corrigir acentuação dos dados carregados</button>
+              </div>
+            </article>
+
             <article class="settings-card settings-card-large settings-internal-tools" hidden>
               <div class="settings-card-header">
                 <div>
@@ -894,6 +907,6 @@
       </div>
     </div>
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
-    <script src="app.js?v=40"></script>
+    <script src="app.js?v=41"></script>
   </body>
 </html>

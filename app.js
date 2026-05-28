@@ -198,6 +198,7 @@ const defaultState = {
   compositions: defaultCompositions(),
 };
 
+let encodingRepairSuggested = false;
 let state = loadState();
 let saveTimer;
 let cloudAutoSyncTimer;
@@ -314,6 +315,9 @@ const settingsBdiPercent = document.querySelector("#settings-bdi-percent");
 const settingsUserEmail = document.querySelector("#settings-user-email");
 const settingsChangePasswordButton = document.querySelector("#settings-change-password");
 const settingsSignOutButton = document.querySelector("#settings-sign-out");
+const encodingTools = document.querySelector("#encoding-tools");
+const encodingStatus = document.querySelector("#encoding-status");
+const fixLoadedEncodingButton = document.querySelector("#fix-loaded-encoding");
 const logoutConfirmation = document.querySelector("#logout-confirmation");
 const cancelLogoutButton = document.querySelector("#cancel-logout");
 const confirmLogoutButton = document.querySelector("#confirm-logout");
@@ -378,11 +382,40 @@ const CP1252_BYTE_BY_CODE_POINT = new Map([
 ]);
 
 function hasMojibakeText(value) {
-  return /(?:Ã|Â|â[€œ€¢“”–—])/u.test(String(value || ""));
+  return /(?:Ã|Â|â|�)/u.test(String(value || ""));
 }
 
 function repairTextEncoding(value) {
-  if (typeof value !== "string" || !hasMojibakeText(value) || typeof TextDecoder === "undefined") return value;
+  if (typeof value !== "string") return value;
+  if (!hasMojibakeText(value) || typeof TextDecoder === "undefined") return value.normalize("NFC");
+
+  let best = value;
+  let bestScore = textEncodingIssueScore(value);
+
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    const repaired = decodeMojibakeOnce(best);
+    const score = textEncodingIssueScore(repaired);
+
+    if (score >= bestScore || repaired === best) break;
+
+    best = repaired;
+    bestScore = score;
+
+    if (!hasMojibakeText(best)) break;
+  }
+
+  if (best !== value) encodingRepairSuggested = true;
+  return best.normalize("NFC");
+}
+
+function textEncodingIssueScore(value) {
+  const text = String(value || "");
+  const mojibakeMatches = text.match(/(?:Ã.|Â.|â..|�)/gu) || [];
+  return mojibakeMatches.length * 3 + (text.match(/[ÃÂâ�]/gu) || []).length;
+}
+
+function decodeMojibakeOnce(value) {
+  if (typeof TextDecoder === "undefined") return value;
 
   const bytes = [];
 
@@ -400,6 +433,30 @@ function repairTextEncoding(value) {
 
 function cleanText(value, fallback = "") {
   return repairTextEncoding(String(value ?? fallback));
+}
+
+function cleanTextOrNull(value) {
+  const text = cleanText(value).trim();
+  return text || null;
+}
+
+function cleanTextDeep(value) {
+  if (typeof value === "string") return cleanText(value);
+  if (Array.isArray(value)) return value.map(cleanTextDeep);
+  if (!value || typeof value !== "object") return value;
+
+  return Object.fromEntries(Object.entries(value).map(([key, entry]) => [key, cleanTextDeep(entry)]));
+}
+
+function hasMojibakeDeep(value) {
+  if (typeof value === "string") return hasMojibakeText(value);
+  if (Array.isArray(value)) return value.some(hasMojibakeDeep);
+  if (!value || typeof value !== "object") return false;
+  return Object.values(value).some(hasMojibakeDeep);
+}
+
+function normalizeLoadedStateText() {
+  state = normalizeState(cleanTextDeep(state));
 }
 
 function normalizeItem(item, index) {
@@ -744,10 +801,11 @@ function currentTimeLabel() {
 }
 
 function setSaveStatus(message) {
-  if (saveStatus) saveStatus.textContent = message;
+  if (saveStatus) saveStatus.textContent = cleanText(message);
 }
 
 function saveState(showFeedback = false, options = {}) {
+  normalizeLoadedStateText();
   window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
 
   const now = currentTimeLabel();
@@ -777,7 +835,7 @@ function scheduleCloudAutoSync(delay = 1200) {
 }
 
 function showToast(message) {
-  toast.textContent = message;
+  toast.textContent = cleanText(message);
   toast.classList.add("visible");
   window.setTimeout(() => toast.classList.remove("visible"), 2200);
 }
@@ -1079,7 +1137,7 @@ function clearCloudSession() {
 function setAuthStatus(message, kind = "") {
   if (!authStatus) return;
 
-  authStatus.textContent = message;
+  authStatus.textContent = cleanText(message);
   authStatus.classList.toggle("success", kind === "success");
   authStatus.classList.toggle("error", kind === "error");
 }
@@ -1121,6 +1179,38 @@ function renderSettingsAccount() {
 function renderSettingsPanel(budgetSummary = calculateBudget()) {
   if (settingsBdiPercent) settingsBdiPercent.textContent = toPercent(budgetSummary.bdiPercent);
   renderSettingsAccount();
+  renderEncodingTools();
+}
+
+function renderEncodingTools() {
+  if (!encodingTools) return;
+
+  const hasIssues = hasMojibakeDeep(state) || encodingRepairSuggested;
+  encodingTools.hidden = !hasIssues;
+  if (encodingStatus) {
+    encodingStatus.textContent = hasIssues
+      ? "Encontramos textos com acentuação quebrada nos dados carregados. Clique para salvar a versão corrigida e sincronizar com a nuvem."
+      : "Acentuação dos dados carregados está correta.";
+  }
+}
+
+async function fixLoadedEncoding() {
+  if (!hasMojibakeDeep(state) && !encodingRepairSuggested) {
+    showToast("Nenhum texto com acentuação quebrada foi encontrado.");
+    renderEncodingTools();
+    return;
+  }
+
+  normalizeLoadedStateText();
+  encodingRepairSuggested = false;
+  hydrateForm();
+  render();
+  saveState(true);
+  showToast("Acentuação dos dados carregados corrigida.");
+
+  if (hasAuthenticatedSession()) {
+    await syncAllDataToCloud({ silent: true });
+  }
 }
 
 function cloudAuthHeaders(config, session = null) {
@@ -1142,7 +1232,7 @@ async function cloudAuthRequest(path, options = {}) {
       ...cloudAuthHeaders(config, options.session),
       ...(options.body ? { "Content-Type": "application/json" } : {}),
     },
-    body: options.body ? JSON.stringify(options.body) : undefined,
+    body: options.body ? JSON.stringify(cleanTextDeep(options.body)) : undefined,
   });
   const data = await readSupabaseResponse(response);
 
@@ -1222,7 +1312,7 @@ function persistCloudConfig(config) {
 function setCloudStatus(message, kind = "") {
   if (!cloudStatus) return;
 
-  cloudStatus.textContent = message;
+  cloudStatus.textContent = cleanText(message);
   cloudStatus.classList.toggle("success", kind === "success");
   cloudStatus.classList.toggle("error", kind === "error");
 }
@@ -1292,9 +1382,9 @@ async function readSupabaseResponse(response) {
   if (!text) return null;
 
   try {
-    return JSON.parse(text);
+    return cleanTextDeep(JSON.parse(text));
   } catch {
-    return text;
+    return cleanText(text);
   }
 }
 
@@ -1324,7 +1414,7 @@ async function supabaseRequest(path, options = {}) {
       ...(options.body ? { "Content-Type": "application/json" } : {}),
       ...(options.headers || {}),
     },
-    body: options.body ? JSON.stringify(options.body) : undefined,
+    body: options.body ? JSON.stringify(cleanTextDeep(options.body)) : undefined,
   });
 
   const data = await readSupabaseResponse(response);
@@ -1774,11 +1864,11 @@ async function ensureCloudOrganization() {
   const bid = activeBid();
   const location = locationParts(bid.location);
   const organizationPayload = {
-    name: bid.company || "OrçaSan Workspace",
-    legal_name: bid.company || null,
-    document_number: bid.companyDocument || null,
-    city: location.city,
-    state: location.state,
+    name: cleanText(bid.company || "OrçaSan Workspace"),
+    legal_name: cleanTextOrNull(bid.company),
+    document_number: cleanTextOrNull(bid.companyDocument),
+    city: cleanTextOrNull(location.city),
+    state: cleanTextOrNull(location.state),
     ...(user?.id ? { owner_user_id: user.id } : {}),
   };
   let organizationRows;
@@ -1829,21 +1919,22 @@ function cloudDateValue(value) {
 }
 
 function cloudBidPayload(budget, organizationId) {
-  const bid = budget.bid;
+  const normalizedBudget = normalizeBudget(cleanTextDeep(budget), 0);
+  const bid = normalizedBudget.bid;
 
   return {
     organization_id: organizationId,
-    title: bid.title || "Licitação sem nome",
-    agency: bid.agency || null,
-    edital_number: bid.editalNumber || null,
-    location: bid.location || null,
-    work_type: bid.workType || null,
+    title: cleanText(bid.title || "Licitação sem nome"),
+    agency: cleanTextOrNull(bid.agency),
+    edital_number: cleanTextOrNull(bid.editalNumber),
+    location: cleanTextOrNull(bid.location),
+    work_type: cleanTextOrNull(bid.workType),
     opening_date: cloudDateValue(bid.openingDate),
     execution_days: Number(bid.executionDays) || 0,
     validity_days: Number(bid.validityDays) || 0,
-    technical_owner: bid.technicalOwner || null,
-    technical_registry: bid.technicalRegistry || null,
-    status: bid.status || "Em orçamento",
+    technical_owner: cleanTextOrNull(bid.technicalOwner),
+    technical_registry: cleanTextOrNull(bid.technicalRegistry),
+    status: cleanText(bid.status || "Em orçamento"),
     updated_at: new Date().toISOString(),
   };
 }
@@ -1867,13 +1958,13 @@ function cloudBdiPayload(bidId, bdi) {
 }
 
 function cloudBudgetItemsPayload(bidId, items) {
-  return items.map((item, index) => ({
+  return items.map((item, index) => normalizeItem(cleanTextDeep(item), index)).map((item, index) => ({
     bid_id: bidId,
     position: index + 1,
-    stage: item.stage || null,
-    code: item.code || null,
-    description: item.description || "Item sem descrição",
-    unit: item.unit || "un",
+    stage: cleanTextOrNull(item.stage),
+    code: cleanTextOrNull(item.code),
+    description: cleanText(item.description || "Item sem descrição"),
+    unit: cleanText(item.unit || "un"),
     quantity: parseNumber(item.quantity),
     unit_price: parseNumber(item.unitPrice),
   }));
@@ -1946,13 +2037,13 @@ async function saveBudgetToCloud(budget, organization = null) {
 }
 
 function cloudCompositionsPayload(organizationId) {
-  return state.compositions.map((composition) => ({
+  return state.compositions.map((composition, index) => normalizeComposition(cleanTextDeep(composition), index)).map((composition) => ({
     organization_id: organizationId,
-    code: composition.code || null,
-    title: composition.title || "Composição sem nome",
-    unit: composition.unit || "un",
+    code: cleanTextOrNull(composition.code),
+    title: cleanText(composition.title || "Composição sem nome"),
+    unit: cleanText(composition.unit || "un"),
     unit_cost: parseNumber(composition.cost),
-    note: composition.note || null,
+    note: cleanTextOrNull(composition.note),
   }));
 }
 
@@ -2292,7 +2383,7 @@ async function deleteCloudBudgetById(cloudBidId) {
 }
 
 function escapeHtml(value) {
-  return String(value ?? "").replace(/[&<>"']/g, (char) => {
+  return cleanText(value).replace(/[&<>"']/g, (char) => {
     const entities = {
       "&": "&amp;",
       "<": "&lt;",
@@ -2456,7 +2547,7 @@ function hydrateForm() {
 
   bidInputs.forEach((input) => {
     const key = input.dataset.bid;
-    input.value = budget.bid[key] ?? "";
+    input.value = typeof budget.bid[key] === "string" ? cleanText(budget.bid[key]) : (budget.bid[key] ?? "");
   });
 
   bdiInputs.forEach((input) => {
@@ -3017,7 +3108,7 @@ function updateItem(id, field, value) {
   if (field === "quantity" || field === "unitPrice") {
     item[field] = parseNumber(value);
   } else {
-    item[field] = value;
+    item[field] = cleanText(value);
   }
 }
 
@@ -3063,7 +3154,7 @@ function updateComposition(id, field, value) {
   if (field === "cost") {
     composition[field] = parseNumber(value);
   } else {
-    composition[field] = value;
+    composition[field] = cleanText(value);
   }
 }
 
@@ -3126,10 +3217,10 @@ function selectedWizardStartMode() {
 
 function newBidWizardData() {
   return {
-    title: String(wizardBidTitleInput?.value || "").trim(),
-    agency: String(wizardBidAgencyInput?.value || "").trim(),
-    workType: String(wizardBidWorkTypeInput?.value || "").trim(),
-    location: String(wizardBidLocationInput?.value || "").trim(),
+    title: cleanText(wizardBidTitleInput?.value).trim(),
+    agency: cleanText(wizardBidAgencyInput?.value).trim(),
+    workType: cleanText(wizardBidWorkTypeInput?.value).trim(),
+    location: cleanText(wizardBidLocationInput?.value).trim(),
     openingDate: String(wizardBidOpeningDateInput?.value || "").trim(),
     executionDays: String(wizardBidExecutionDaysInput?.value || "").trim(),
     validityDays: String(wizardBidValidityDaysInput?.value || "").trim(),
@@ -3284,10 +3375,11 @@ function submitNewBidWizard(event) {
 }
 
 function createBudget(options = {}) {
+  const cleanOptions = cleanTextDeep(options);
   const current = getActiveBudget();
   const nextIndex = state.budgets.length + 1;
-  const startMode = options.startMode || "blank";
-  const hasOption = (key) => Object.prototype.hasOwnProperty.call(options, key);
+  const startMode = cleanOptions.startMode || "blank";
+  const hasOption = (key) => Object.prototype.hasOwnProperty.call(cleanOptions, key);
   const templateItems =
     startMode === "template"
       ? defaultItems().map((item) => ({
@@ -3304,14 +3396,14 @@ function createBudget(options = {}) {
       companyDocument: current.bid.companyDocument,
       technicalOwner: current.bid.technicalOwner,
       technicalRegistry: current.bid.technicalRegistry,
-      title: hasOption("title") ? options.title : `Nova licitação de saneamento ${nextIndex}`,
-      agency: hasOption("agency") ? options.agency : "",
-      editalNumber: options.editalNumber || `Edital ${String(nextIndex).padStart(3, "0")}/2026`,
-      location: hasOption("location") ? options.location : "",
-      workType: hasOption("workType") ? options.workType : defaultBid().workType,
-      openingDate: hasOption("openingDate") ? options.openingDate : "",
-      executionDays: options.executionDays === undefined ? defaultBid().executionDays : parseNumber(options.executionDays),
-      validityDays: options.validityDays === undefined ? defaultBid().validityDays : parseNumber(options.validityDays),
+      title: hasOption("title") ? cleanOptions.title : `Nova licitação de saneamento ${nextIndex}`,
+      agency: hasOption("agency") ? cleanOptions.agency : "",
+      editalNumber: cleanOptions.editalNumber || `Edital ${String(nextIndex).padStart(3, "0")}/2026`,
+      location: hasOption("location") ? cleanOptions.location : "",
+      workType: hasOption("workType") ? cleanOptions.workType : defaultBid().workType,
+      openingDate: hasOption("openingDate") ? cleanOptions.openingDate : "",
+      executionDays: cleanOptions.executionDays === undefined ? defaultBid().executionDays : parseNumber(cleanOptions.executionDays),
+      validityDays: cleanOptions.validityDays === undefined ? defaultBid().validityDays : parseNumber(cleanOptions.validityDays),
       status: "Em orçamento",
     },
     bdi: {
@@ -3408,12 +3500,12 @@ function resetOutOfBdiTaxes() {
 }
 
 function csvCell(value) {
-  const text = String(value ?? "").replace(/"/g, '""');
+  const text = cleanText(value).replace(/"/g, '""');
   return `"${text}"`;
 }
 
 function normalizeHeader(value) {
-  return String(value || "")
+  return cleanText(value)
     .trim()
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
@@ -3422,7 +3514,7 @@ function normalizeHeader(value) {
 }
 
 function normalizeImportText(value) {
-  return String(value || "")
+  return cleanText(value)
     .trim()
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
@@ -3472,7 +3564,7 @@ function numberForCsv(value) {
 }
 
 function fileSafeName(value) {
-  return String(value || "orcamento")
+  return cleanText(value || "orcamento")
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
     .replace(/[^a-zA-Z0-9]+/g, "-")
@@ -3492,7 +3584,7 @@ function downloadTextFile(filename, contents, type) {
 }
 
 function exportCsv() {
-  const budget = getActiveBudget();
+  const budget = normalizeBudget(getActiveBudget(), 0);
   const budgetSummary = calculateBudget(budget);
   const classificationById = new Map(budgetSummary.classifiedItems.map((item) => [item.id, item]));
   const header = [
@@ -3561,7 +3653,7 @@ function spreadsheetRow(values, className = "") {
 }
 
 function exportXls() {
-  const budget = getActiveBudget();
+  const budget = normalizeBudget(getActiveBudget(), 0);
   const budgetSummary = calculateBudget(budget);
   const classificationById = new Map(budgetSummary.classifiedItems.map((item) => [item.id, item]));
   const bidRows = [
@@ -3603,7 +3695,7 @@ function exportXls() {
     `${percentFormatter.format(item.accumulated * 100)}%`,
     item.abcClass,
   ]);
-  const compositionRows = state.compositions.map((composition) => [
+  const compositionRows = state.compositions.map((composition, index) => normalizeComposition(composition, index)).map((composition) => [
     composition.code,
     composition.title,
     composition.unit,
@@ -3687,7 +3779,7 @@ function proposalRows(rows) {
 }
 
 function buildProposalDocument() {
-  const budget = getActiveBudget();
+  const budget = normalizeBudget(getActiveBudget(), 0);
   const budgetSummary = calculateBudget(budget);
   const bdiBreakdown = getBdiBreakdown(budget);
   const classificationById = new Map(budgetSummary.classifiedItems.map((item) => [item.id, item]));
@@ -3891,9 +3983,34 @@ function splitCsvLine(line, separator) {
   return values;
 }
 
+function decodedTextScore(text) {
+  return textEncodingIssueScore(text) + (String(text || "").match(/\uFFFD/g) || []).length * 5;
+}
+
+function decodeSpreadsheetText(buffer) {
+  if (typeof TextDecoder === "undefined") return "";
+
+  const bytes = buffer instanceof ArrayBuffer ? new Uint8Array(buffer) : buffer;
+  const utf8 = new TextDecoder("utf-8").decode(bytes);
+  const latin1 = new TextDecoder("iso-8859-1").decode(bytes);
+  const best = decodedTextScore(latin1) < decodedTextScore(utf8) ? latin1 : utf8;
+
+  return cleanText(best).replace(/^\uFEFF/, "");
+}
+
+async function readCsvFileText(file) {
+  if (!file) return "";
+
+  try {
+    return decodeSpreadsheetText(await file.arrayBuffer());
+  } catch {
+    return cleanText(await file.text()).replace(/^\uFEFF/, "");
+  }
+}
+
 function parseCsvTable(text) {
-  const cleanText = String(text || "").replace(/^\uFEFF/, "");
-  const lines = cleanText
+  const normalizedText = cleanText(text).replace(/^\uFEFF/, "");
+  const lines = normalizedText
     .split(/\r?\n/)
     .map((line) => line.trim())
     .filter(Boolean);
@@ -4059,12 +4176,12 @@ function findImportHeaderRow(cleanRows) {
 
 function importValue(row, index) {
   if (index === undefined || index < 0) return "";
-  return String(row[index] ?? "").trim();
+  return cleanText(row[index]).trim();
 }
 
 function cleanSpreadsheetRows(rows) {
   return rows
-    .map((row) => row.map((cell) => String(cell ?? "").trim()))
+    .map((row) => row.map((cell) => cleanText(cell).trim()))
     .filter((row) => row.some(Boolean));
 }
 
@@ -4292,7 +4409,7 @@ async function parseXlsxTable(file) {
 async function readBudgetImportData(file) {
   const fileName = String(file?.name || "").toLowerCase();
   const isExcel = fileName.endsWith(".xlsx") || file?.type === "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
-  const rows = isExcel ? await parseXlsxTable(file) : parseCsvTable(await file.text());
+  const rows = isExcel ? await parseXlsxTable(file) : parseCsvTable(await readCsvFileText(file));
   const cleanRows = cleanSpreadsheetRows(rows);
 
   if (cleanRows.length < 2) {
@@ -4664,8 +4781,9 @@ function syncBidInputs(field, value, sourceInput = null) {
 bidInputs.forEach((input) => {
   input.addEventListener("input", (event) => {
     const field = event.target.dataset.bid;
-    activeBid()[field] = event.target.value;
-    syncBidInputs(field, event.target.value, event.target);
+    const value = cleanText(event.target.value);
+    activeBid()[field] = value;
+    syncBidInputs(field, value, event.target);
     renderBidMeta();
     renderPipeline();
     renderBidFilters();
@@ -4850,6 +4968,7 @@ updatePasswordCloudButton?.addEventListener("click", updateCloudPassword);
 signOutCloudButton?.addEventListener("click", requestSignOutConfirmation);
 settingsChangePasswordButton?.addEventListener("click", openPasswordRecoveryFromSettings);
 settingsSignOutButton?.addEventListener("click", requestSignOutConfirmation);
+fixLoadedEncodingButton?.addEventListener("click", fixLoadedEncoding);
 cancelLogoutButton?.addEventListener("click", closeLogoutConfirmation);
 confirmLogoutButton?.addEventListener("click", async () => {
   closeLogoutConfirmation();
