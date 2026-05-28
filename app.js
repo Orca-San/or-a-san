@@ -6,25 +6,50 @@ const ADMIN_MODE_KEY = "orcasan.admin-mode.v1";
 const DEFAULT_CLOUD_API_URL = "https://dtfvrjlmncrijniqskhv.supabase.co/rest/v1/";
 const DEFAULT_CLOUD_PUBLISHABLE_KEY = "sb_publishable_qr_f9x2Os79RHQG0XhX_4Q_1uh14LGe";
 const PUBLIC_APP_URL = "https://orcasan.vercel.app/";
-const REQUIRED_IMPORT_COLUMNS = ["description", "unit", "quantity", "unitPrice"];
+const REQUIRED_IMPORT_COLUMNS = ["description"];
+const RECOMMENDED_IMPORT_COLUMNS = ["description", "unit", "quantity", "unitPrice"];
+const IMPORT_FIELD_DEFINITIONS = [
+  { key: "description", label: "Descrição", required: true, defaultText: "" },
+  { key: "unit", label: "Unidade", required: false, recommended: true, defaultText: "un" },
+  { key: "quantity", label: "Quantidade", required: false, recommended: true, defaultText: "1" },
+  { key: "unitPrice", label: "Preço unitário", required: false, recommended: true, defaultText: "R$ 0,00" },
+  { key: "code", label: "Item", required: false, recommended: false, defaultText: "item automático" },
+  { key: "stage", label: "Grupo", required: false, recommended: false, defaultText: "Importado da planilha" },
+];
 const IMPORT_COLUMN_ALIASES = {
-  description: ["descrição", "descricao", "serviço", "servico", "item", "objeto"],
+  description: ["descrição", "descricao", "descr", "desc", "serviço", "servico", "item", "objeto"],
   unit: ["unidade", "un", "und"],
-  quantity: ["quantidade", "qtd", "qtde"],
+  quantity: ["quantidade", "qtd", "qtde", "quant", "quantd"],
   unitPrice: [
     "preco_unitario",
     "preço unitário",
     "preco unitario",
     "valor unitário",
     "valor unitario",
+    "vl unit",
+    "vlr unit",
+    "vl unitario",
+    "vlr unitario",
+    "unitario",
     "preço",
     "preco",
     "valor",
     "preço unitário sem bdi",
     "preco unitario sem bdi",
   ],
-  code: ["codigo", "código", "cod", "item", "ref", "referência", "referencia"],
-  stage: ["etapa", "categoria", "grupo", "fase"],
+  code: ["item", "codigo", "código", "cod", "ref", "referência", "referencia"],
+  stage: ["grupo", "etapa", "categoria", "fase"],
+};
+const IMPORT_ALIAS_WEIGHTS = {
+  description: {
+    item: 0.7,
+    objeto: 0.84,
+  },
+  unitPrice: {
+    preco: 0.82,
+    valor: 0.78,
+    unitario: 0.86,
+  },
 };
 
 function defaultBid() {
@@ -180,8 +205,12 @@ let isCloudSyncing = false;
 let bidStatusFilter = "Todas";
 let deferredInstallPrompt = null;
 let pendingBudgetImportItems = [];
+let pendingBudgetImportRows = [];
+let pendingBudgetImportColumns = {};
+let newBidWizardStep = 0;
 
 const BID_STATUSES = ["Em orçamento", "Em revisão", "Enviada", "Vencida", "Perdida"];
+const NEW_BID_WIZARD_TITLES = ["Dados básicos", "Local e prazos", "Como deseja começar", "Confirmação"];
 
 const currencyFormatter = new Intl.NumberFormat("pt-BR", {
   style: "currency",
@@ -237,6 +266,8 @@ const cancelBudgetImportButton = document.querySelector("#cancel-budget-import")
 const confirmBudgetImportButton = document.querySelector("#confirm-budget-import");
 const budgetImportFileName = document.querySelector("#budget-import-file-name");
 const budgetImportMessage = document.querySelector("#budget-import-message");
+const budgetImportMapping = document.querySelector("#budget-import-mapping");
+const budgetImportMappingBody = document.querySelector("#budget-import-mapping-body");
 const budgetImportPreview = document.querySelector("#budget-import-preview");
 const budgetImportSummary = document.querySelector("#budget-import-summary");
 const budgetImportPreviewBody = document.querySelector("#budget-import-preview-body");
@@ -286,6 +317,26 @@ const settingsSignOutButton = document.querySelector("#settings-sign-out");
 const logoutConfirmation = document.querySelector("#logout-confirmation");
 const cancelLogoutButton = document.querySelector("#cancel-logout");
 const confirmLogoutButton = document.querySelector("#confirm-logout");
+const newBidWizard = document.querySelector("#new-bid-wizard");
+const newBidWizardForm = document.querySelector("#new-bid-wizard-form");
+const closeNewBidWizardButton = document.querySelector("#close-new-bid-wizard");
+const newBidWizardBackButton = document.querySelector("#new-bid-wizard-back");
+const newBidWizardNextButton = document.querySelector("#new-bid-wizard-next");
+const newBidWizardCreateButton = document.querySelector("#new-bid-wizard-create");
+const newBidWizardProgress = document.querySelector("#new-bid-wizard-progress");
+const newBidWizardTitle = document.querySelector("#new-bid-wizard-title");
+const newBidWizardError = document.querySelector("#new-bid-wizard-error");
+const newBidWizardSummary = document.querySelector("#new-bid-wizard-summary");
+const newBidWizardPanels = document.querySelectorAll("[data-wizard-step]");
+const newBidWizardIndicators = document.querySelectorAll("[data-wizard-step-indicator]");
+const wizardBidTitleInput = document.querySelector("#wizard-bid-title");
+const wizardBidAgencyInput = document.querySelector("#wizard-bid-agency");
+const wizardBidWorkTypeInput = document.querySelector("#wizard-bid-work-type");
+const wizardBidLocationInput = document.querySelector("#wizard-bid-location");
+const wizardBidOpeningDateInput = document.querySelector("#wizard-bid-opening-date");
+const wizardBidExecutionDaysInput = document.querySelector("#wizard-bid-execution-days");
+const wizardBidValidityDaysInput = document.querySelector("#wizard-bid-validity-days");
+const wizardStartModeInputs = document.querySelectorAll("input[name='wizard-start-mode']");
 
 function clone(value) {
   return JSON.parse(JSON.stringify(value));
@@ -458,6 +509,160 @@ function hasPersistedWorkspaceData() {
   return Boolean(window.localStorage.getItem(STORAGE_KEY) || window.localStorage.getItem(LEGACY_STORAGE_KEY));
 }
 
+function loadPersistedWorkspaceState() {
+  const raw = window.localStorage.getItem(STORAGE_KEY) || window.localStorage.getItem(LEGACY_STORAGE_KEY);
+  if (!raw) return null;
+
+  try {
+    return normalizeState(JSON.parse(raw));
+  } catch {
+    return null;
+  }
+}
+
+function comparableWorkspaceSlice(workspace) {
+  return {
+    budgets: (workspace?.budgets || []).map((budget) => ({
+      bid: budget.bid,
+      bdi: budget.bdi,
+      items: budget.items,
+    })),
+    compositions: workspace?.compositions || [],
+  };
+}
+
+function isDemoOnlyWorkspace(workspace) {
+  const normalized = normalizeState(workspace || {});
+  const demo = normalizeState(defaultState);
+
+  if (normalized.budgets.length !== 1) return false;
+  if (normalized.budgets[0].cloudBidId) return false;
+
+  return JSON.stringify(comparableWorkspaceSlice(normalized)) === JSON.stringify(comparableWorkspaceSlice(demo));
+}
+
+function hasMeaningfulWorkspaceData(workspace = loadPersistedWorkspaceState()) {
+  if (!workspace) return false;
+  return !isDemoOnlyWorkspace(workspace);
+}
+
+function alternateLocalOrigin() {
+  const { protocol, hostname, port } = window.location;
+  const suffix = port ? `:${port}` : "";
+
+  if (hostname === "localhost") return `${protocol}//127.0.0.1${suffix}`;
+  if (hostname === "127.0.0.1") return `${protocol}//localhost${suffix}`;
+
+  return "";
+}
+
+function isTrustedLocalOrigin(origin) {
+  return [window.location.origin, alternateLocalOrigin()].filter(Boolean).includes(origin);
+}
+
+function localWorkspaceSnapshot() {
+  return {
+    workspace: window.localStorage.getItem(STORAGE_KEY),
+    legacyWorkspace: window.localStorage.getItem(LEGACY_STORAGE_KEY),
+    cloudSession: window.localStorage.getItem(CLOUD_SESSION_KEY),
+    cloudConfig: window.localStorage.getItem(CLOUD_CONFIG_KEY),
+  };
+}
+
+function isRecoveryBridgePage() {
+  return new URLSearchParams(window.location.search).has("orcasanBridge");
+}
+
+window.addEventListener("message", (event) => {
+  if (!isTrustedLocalOrigin(event.origin)) return;
+  if (event.data?.type !== "orcasan:request-local-snapshot") return;
+
+  event.source?.postMessage(
+    {
+      type: "orcasan:local-snapshot",
+      sourceOrigin: window.location.origin,
+      payload: localWorkspaceSnapshot(),
+    },
+    event.origin,
+  );
+});
+
+function requestLocalSnapshotFromOrigin(origin) {
+  return new Promise((resolve) => {
+    const frame = document.createElement("iframe");
+    let finished = false;
+    let attempts = 0;
+
+    function cleanup(value = null) {
+      if (finished) return;
+      finished = true;
+      window.removeEventListener("message", receiveSnapshot);
+      window.clearInterval(interval);
+      window.clearTimeout(timeout);
+      frame.remove();
+      resolve(value);
+    }
+
+    function receiveSnapshot(event) {
+      if (event.origin !== origin || event.data?.type !== "orcasan:local-snapshot") return;
+      cleanup(event.data.payload || null);
+    }
+
+    function askSnapshot() {
+      attempts += 1;
+      frame.contentWindow?.postMessage({ type: "orcasan:request-local-snapshot" }, origin);
+      if (attempts >= 12) cleanup();
+    }
+
+    frame.hidden = true;
+    frame.src = `${origin}${window.location.pathname}?orcasanBridge=${Date.now()}`;
+    window.addEventListener("message", receiveSnapshot);
+    document.body.appendChild(frame);
+
+    const interval = window.setInterval(askSnapshot, 350);
+    const timeout = window.setTimeout(() => cleanup(), 5000);
+  });
+}
+
+async function offerAlternateOriginRecovery() {
+  const origin = alternateLocalOrigin();
+  if (!origin || isRecoveryBridgePage()) return;
+
+  const sessionKey = `orcasan.recovery-checked.${origin}`;
+  if (window.sessionStorage.getItem(sessionKey)) return;
+  window.sessionStorage.setItem(sessionKey, "1");
+
+  const snapshot = await requestLocalSnapshotFromOrigin(origin);
+  const rawWorkspace = snapshot?.workspace || snapshot?.legacyWorkspace;
+  if (!rawWorkspace) return;
+
+  let incomingState;
+
+  try {
+    incomingState = normalizeState(JSON.parse(rawWorkspace));
+  } catch {
+    return;
+  }
+
+  if ((incomingState.budgets?.length || 0) <= (state.budgets?.length || 0)) return;
+
+  const confirmed = window.confirm(
+    `Encontrei ${incomingState.budgets.length} licitação(ões) salva(s) em ${origin}. Deseja trazer esses dados para este endereço?`,
+  );
+
+  if (!confirmed) return;
+
+  state = incomingState;
+  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  if (snapshot.cloudSession) window.localStorage.setItem(CLOUD_SESSION_KEY, snapshot.cloudSession);
+  if (snapshot.cloudConfig) window.localStorage.setItem(CLOUD_CONFIG_KEY, snapshot.cloudConfig);
+
+  hydrateForm();
+  render();
+  saveState(true);
+  showToast("Licitações recuperadas deste computador.");
+}
+
 function getActiveBudget() {
   let budget = state.budgets.find((candidate) => candidate.id === state.activeBudgetId);
 
@@ -531,22 +736,33 @@ function cloudBidFingerprint(row) {
   return "";
 }
 
-function saveState(showFeedback = false, options = {}) {
-  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-
-  const now = new Intl.DateTimeFormat("pt-BR", {
+function currentTimeLabel() {
+  return new Intl.DateTimeFormat("pt-BR", {
     hour: "2-digit",
     minute: "2-digit",
   }).format(new Date());
+}
 
-  saveStatus.textContent = `Salvo no navegador às ${now}`;
+function setSaveStatus(message) {
+  if (saveStatus) saveStatus.textContent = message;
+}
+
+function saveState(showFeedback = false, options = {}) {
+  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+
+  const now = currentTimeLabel();
+  setSaveStatus(
+    hasAuthenticatedSession()
+      ? `Salvo neste dispositivo às ${now}. Sincronizando com a nuvem...`
+      : `Salvo neste dispositivo às ${now}`,
+  );
   if (showFeedback) showToast("Orçamento salvo.");
 
   if (options.syncCloud !== false) scheduleCloudAutoSync();
 }
 
 function scheduleSave() {
-  saveStatus.textContent = "Alterações pendentes...";
+  setSaveStatus("Alterações pendentes...");
   window.clearTimeout(saveTimer);
   saveTimer = window.setTimeout(() => saveState(), 300);
 }
@@ -556,7 +772,7 @@ function scheduleCloudAutoSync(delay = 1200) {
 
   window.clearTimeout(cloudAutoSyncTimer);
   cloudAutoSyncTimer = window.setTimeout(() => {
-    syncActiveBudgetToCloud({ silent: true });
+    syncAllDataToCloud({ silent: true, auto: true });
   }, delay);
 }
 
@@ -1037,7 +1253,7 @@ function saveCloudConfig(showFeedback = true) {
   const config = {
     ...current,
     apiUrl: normalizeCloudApiUrl(cloudApiUrlInput?.value || current.apiUrl),
-    publishableKey: String(cloudPublishableKeyInput?.value || "").trim(),
+    publishableKey: String(cloudPublishableKeyInput?.value || current.publishableKey || DEFAULT_CLOUD_PUBLISHABLE_KEY).trim(),
   };
 
   persistCloudConfig(config);
@@ -1051,12 +1267,13 @@ function saveCloudConfig(showFeedback = true) {
 }
 
 function requireCloudConfig() {
-  const config = saveCloudConfig(false);
+  const config = loadCloudConfig();
 
   if (!config.apiUrl || !config.publishableKey) {
     throw new Error("Informe a API URL e a publishable key.");
   }
 
+  persistCloudConfig(config);
   return config;
 }
 
@@ -1088,8 +1305,8 @@ function supabaseErrorMessage(error) {
     return "Conexão chegou no Supabase, mas falta liberar permissão/API para estas tabelas.";
   }
 
-  if (/Failed to fetch|NetworkError/i.test(message)) {
-    return "Não consegui acessar o Supabase. Confira a API URL.";
+  if (/Failed to fetch|NetworkError|nome remoto não pôde ser resolvido|could not be resolved/i.test(message)) {
+    return "Não consegui acessar a nuvem. Confira sua conexão com a internet e tente novamente.";
   }
 
   return message.length > 170 ? `${message.slice(0, 170)}...` : message;
@@ -1244,6 +1461,32 @@ async function ensureCloudMembership(organizationId, userId) {
   return Array.isArray(memberRows) ? memberRows[0] : memberRows;
 }
 
+async function cloudWorkspaceSummary() {
+  const cloudBids = await supabaseRequest("bids?select=*&order=updated_at.desc,created_at.desc", {
+    prefer: "",
+  });
+  const bids = dedupeCloudBids(cloudBids);
+
+  return {
+    bids,
+    budgetCount: bids.length,
+  };
+}
+
+function meaningfulBudgets(workspace) {
+  if (!workspace || isDemoOnlyWorkspace(workspace)) return [];
+  return normalizeState(workspace).budgets;
+}
+
+function hasLocalBudgetsMissingInCloud(localWorkspace, cloudRows) {
+  const cloudKeys = new Set((cloudRows || []).map((row) => cloudBidFingerprint(row) || `cloud:${row.id}`));
+
+  return meaningfulBudgets(localWorkspace).some((budget) => {
+    const key = budgetFingerprint(budget) || `local:${budget.id}`;
+    return !cloudKeys.has(key);
+  });
+}
+
 async function syncAuthProfileAndWorkspace(form = authFormPayload()) {
   const session = await ensureFreshCloudSession();
   const user = session?.user;
@@ -1259,14 +1502,50 @@ async function syncAuthProfileAndWorkspace(form = authFormPayload()) {
   return organization;
 }
 
-async function syncWorkspaceAfterLogin(hasLocalWorkspace) {
-  if (hasLocalWorkspace) await syncAllDataToCloud({ silent: true });
-  return loadDataFromCloud({ confirm: false, silent: true });
+async function syncWorkspaceAfterLogin(localWorkspace = loadPersistedWorkspaceState()) {
+  try {
+    const cloudSummary = await cloudWorkspaceSummary();
+    const localBudgetCount = meaningfulBudgets(localWorkspace).length;
+    const shouldOfferLocalUpload =
+      localBudgetCount > 0 &&
+      cloudSummary.budgetCount > 0 &&
+      hasLocalBudgetsMissingInCloud(localWorkspace, cloudSummary.bids);
+
+    if (cloudSummary.budgetCount === 0 && localBudgetCount > 0) {
+      state = normalizeState(localWorkspace);
+      hydrateForm();
+      render();
+      const uploadResult = await syncAllDataToCloud({ silent: true });
+      if (!uploadResult) return null;
+      return loadDataFromCloud({ confirm: false, silent: true });
+    }
+
+    if (shouldOfferLocalUpload) {
+      const confirmed = window.confirm(
+        `A nuvem tem ${cloudSummary.budgetCount} licitação(ões), mas este navegador tem ${localBudgetCount} licitação(ões) com dados que ainda não estão na nuvem. Deseja enviar estes dados para a nuvem agora?`,
+      );
+
+      if (confirmed) {
+        state = normalizeState(localWorkspace);
+        hydrateForm();
+        render();
+        const uploadResult = await syncAllDataToCloud({ silent: true });
+        if (!uploadResult) return null;
+      }
+    }
+
+    return loadDataFromCloud({ confirm: false, silent: true });
+  } catch (error) {
+    console.error(error);
+    setCloudStatus(supabaseErrorMessage(error), "error");
+    setSaveStatus("Conta conectada. Usando dados deste dispositivo até a nuvem responder.");
+    return null;
+  }
 }
 
 async function signUpCloudAccount() {
   return runAuthAction("Criando conta...", "", async () => {
-    const hasLocalWorkspace = hasPersistedWorkspaceData();
+    const localWorkspace = loadPersistedWorkspaceState();
     const form = authFormPayload();
     validateAuthForm(form);
 
@@ -1294,14 +1573,14 @@ async function signUpCloudAccount() {
     setAuthStatus("Conta criada com sucesso.", "success");
     showToast("Conta criada e conectada.");
     showPage("#dashboard");
-    await syncWorkspaceAfterLogin(hasLocalWorkspace);
+    await syncWorkspaceAfterLogin(localWorkspace);
     return response;
   });
 }
 
 async function signInCloudAccount() {
   return runAuthAction("Entrando na conta...", "", async () => {
-    const hasLocalWorkspace = hasPersistedWorkspaceData();
+    const localWorkspace = loadPersistedWorkspaceState();
     const form = authFormPayload();
     validateAuthForm(form);
 
@@ -1320,7 +1599,7 @@ async function signInCloudAccount() {
     setAuthStatus("Acesso confirmado.", "success");
     showToast("Conta conectada.");
     showPage("#dashboard");
-    await syncWorkspaceAfterLogin(hasLocalWorkspace);
+    await syncWorkspaceAfterLogin(localWorkspace);
     return response;
   });
 }
@@ -1739,10 +2018,12 @@ async function syncActiveBudgetToCloud(options = {}) {
     try {
       await persistActiveBudgetToCloud();
       setCloudStatus("Dados sincronizados com a nuvem.", "success");
+      setSaveStatus(`Salvo na nuvem às ${currentTimeLabel()}`);
       return true;
     } catch (error) {
       console.error(error);
       setCloudStatus(supabaseErrorMessage(error), "error");
+      setSaveStatus("Salvo neste dispositivo. A sincronização com a nuvem falhou.");
       return null;
     } finally {
       isCloudSyncing = false;
@@ -1788,10 +2069,12 @@ async function syncAllDataToCloud(options = {}) {
     try {
       const result = await persistAllDataToCloud();
       setCloudStatus(`${result.budgetCount} licitação(ões) sincronizada(s) com a nuvem.`, "success");
+      setSaveStatus(`Salvo na nuvem às ${currentTimeLabel()}`);
       return result;
     } catch (error) {
       console.error(error);
       setCloudStatus(supabaseErrorMessage(error), "error");
+      setSaveStatus("Salvo neste dispositivo. A sincronização com a nuvem falhou.");
       return null;
     } finally {
       isCloudSyncing = false;
@@ -1987,6 +2270,7 @@ async function loadDataFromCloud(options = {}) {
     try {
       const result = await persistCloudDataToLocal();
       setCloudStatus(`${result.budgetCount} licita\u00e7\u00e3o(\u00f5es) carregada(s) da nuvem.`, "success");
+      setSaveStatus(`${result.budgetCount} licitação(ões) carregada(s) da nuvem às ${currentTimeLabel()}`);
       return result;
     } catch (error) {
       console.error(error);
@@ -2325,7 +2609,7 @@ function aggregateStages(classifiedItems) {
   const stageMap = new Map();
 
   classifiedItems.forEach((item) => {
-    const stage = item.stage || "Sem etapa";
+    const stage = item.stage || "Sem grupo";
     const current = stageMap.get(stage) || 0;
     stageMap.set(stage, current + item.totalWithBdi);
   });
@@ -2369,7 +2653,7 @@ function renderCharts(budgetSummary) {
   `;
 
   if (!stageTotals.length) {
-    stageChart.innerHTML = '<div class="empty-state">Adicione itens para gerar o gráfico por etapa.</div>';
+    stageChart.innerHTML = '<div class="empty-state">Adicione itens para gerar o gráfico por grupo.</div>';
   } else {
     stageChart.innerHTML = stageTotals
       .slice(0, 6)
@@ -2760,11 +3044,15 @@ function addItem() {
 }
 
 function removeItem(id) {
+  const item = activeItems().find((currentItem) => currentItem.id === id);
+  if (!item) return;
+
+  const confirmed = window.confirm(`Remover o item "${item.description || item.code || "sem descrição"}"?`);
   if (!confirmed) return;
 
   getActiveBudget().items = activeItems().filter((item) => item.id !== id);
   render();
-  scheduleSave();
+  saveState(true);
   showToast("Item removido.");
 }
 
@@ -2800,11 +3088,15 @@ function addComposition() {
 }
 
 function removeComposition(id) {
+  const composition = state.compositions.find((currentComposition) => currentComposition.id === id);
+  if (!composition) return;
+
+  const confirmed = window.confirm(`Remover a composição "${composition.title || composition.code || "sem descrição"}"?`);
   if (!confirmed) return;
 
   state.compositions = state.compositions.filter((composition) => composition.id !== id);
   renderCompositions();
-  scheduleSave();
+  saveState(true);
   showToast("Composição removida.");
 }
 
@@ -2828,9 +3120,181 @@ function applyComposition(id) {
   showPage("#orcamento");
 }
 
-function createBudget() {
+function selectedWizardStartMode() {
+  return [...wizardStartModeInputs].find((input) => input.checked)?.value || "blank";
+}
+
+function newBidWizardData() {
+  return {
+    title: String(wizardBidTitleInput?.value || "").trim(),
+    agency: String(wizardBidAgencyInput?.value || "").trim(),
+    workType: String(wizardBidWorkTypeInput?.value || "").trim(),
+    location: String(wizardBidLocationInput?.value || "").trim(),
+    openingDate: String(wizardBidOpeningDateInput?.value || "").trim(),
+    executionDays: String(wizardBidExecutionDaysInput?.value || "").trim(),
+    validityDays: String(wizardBidValidityDaysInput?.value || "").trim(),
+    startMode: selectedWizardStartMode(),
+  };
+}
+
+function setNewBidWizardError(message = "") {
+  if (!newBidWizardError) return;
+
+  newBidWizardError.textContent = message;
+  newBidWizardError.hidden = !message;
+}
+
+function wizardStartModeLabel(value) {
+  const labels = {
+    blank: "Começar em branco",
+    import: "Importar planilha",
+    template: "Usar modelo padrão",
+  };
+
+  return labels[value] || labels.blank;
+}
+
+function renderNewBidWizardSummary() {
+  if (!newBidWizardSummary) return;
+
+  const data = newBidWizardData();
+  const summary = [
+    ["Nome", data.title || "Não informado"],
+    ["Órgão", data.agency || "Não informado"],
+    ["Tipo de obra", data.workType || "Não informado"],
+    ["Município/UF", data.location || "Não informado"],
+    ["Data de abertura", data.openingDate ? toDateBR(data.openingDate) : "Sem data"],
+    ["Prazo de execução", data.executionDays ? `${parseNumber(data.executionDays)} dias` : "Não informado"],
+    ["Validade", data.validityDays ? `${parseNumber(data.validityDays)} dias` : "Não informado"],
+    ["Início", wizardStartModeLabel(data.startMode)],
+  ];
+
+  newBidWizardSummary.innerHTML = summary
+    .map(
+      ([label, value]) => `
+        <div class="wizard-summary-item">
+          <span>${escapeHtml(label)}</span>
+          <strong>${escapeHtml(value)}</strong>
+        </div>
+      `,
+    )
+    .join("");
+}
+
+function renderNewBidWizard() {
+  const totalSteps = NEW_BID_WIZARD_TITLES.length;
+  const title = NEW_BID_WIZARD_TITLES[newBidWizardStep] || NEW_BID_WIZARD_TITLES[0];
+
+  if (newBidWizardProgress) newBidWizardProgress.textContent = `Passo ${newBidWizardStep + 1} de ${totalSteps}`;
+  if (newBidWizardTitle) newBidWizardTitle.textContent = title;
+
+  newBidWizardPanels.forEach((panel) => {
+    panel.hidden = Number(panel.dataset.wizardStep) !== newBidWizardStep;
+  });
+
+  newBidWizardIndicators.forEach((indicator) => {
+    const step = Number(indicator.dataset.wizardStepIndicator);
+    indicator.classList.toggle("active", step === newBidWizardStep);
+    indicator.classList.toggle("done", step < newBidWizardStep);
+  });
+
+  if (newBidWizardBackButton) newBidWizardBackButton.disabled = newBidWizardStep === 0;
+  if (newBidWizardNextButton) newBidWizardNextButton.hidden = newBidWizardStep === totalSteps - 1;
+  if (newBidWizardCreateButton) newBidWizardCreateButton.hidden = newBidWizardStep !== totalSteps - 1;
+
+  if (newBidWizardStep === totalSteps - 1) renderNewBidWizardSummary();
+  setNewBidWizardError("");
+}
+
+function resetNewBidWizard() {
+  newBidWizardStep = 0;
+  newBidWizardForm?.reset();
+  renderNewBidWizard();
+}
+
+function openNewBidWizard() {
+  if (!newBidWizard) {
+    createBudget();
+    return;
+  }
+
+  resetNewBidWizard();
+  newBidWizard.hidden = false;
+  document.body.classList.add("wizard-open");
+  window.setTimeout(() => wizardBidTitleInput?.focus(), 40);
+}
+
+function closeNewBidWizard() {
+  if (!newBidWizard) return;
+
+  newBidWizard.hidden = true;
+  document.body.classList.remove("wizard-open");
+  setNewBidWizardError("");
+}
+
+function validateNewBidWizardStep() {
+  const data = newBidWizardData();
+
+  if (newBidWizardStep === 0 && !data.title) {
+    setNewBidWizardError("Informe o nome da licitação para continuar.");
+    wizardBidTitleInput?.focus();
+    return false;
+  }
+
+  setNewBidWizardError("");
+  return true;
+}
+
+function nextNewBidWizardStep() {
+  if (!validateNewBidWizardStep()) return;
+
+  newBidWizardStep = Math.min(newBidWizardStep + 1, NEW_BID_WIZARD_TITLES.length - 1);
+  renderNewBidWizard();
+}
+
+function previousNewBidWizardStep() {
+  newBidWizardStep = Math.max(newBidWizardStep - 1, 0);
+  renderNewBidWizard();
+}
+
+function submitNewBidWizard(event) {
+  event?.preventDefault();
+  if (newBidWizardStep < NEW_BID_WIZARD_TITLES.length - 1) {
+    nextNewBidWizardStep();
+    return;
+  }
+
+  const previousStep = newBidWizardStep;
+  newBidWizardStep = 0;
+
+  if (!validateNewBidWizardStep()) {
+    renderNewBidWizard();
+    return;
+  }
+
+  newBidWizardStep = previousStep;
+  const data = newBidWizardData();
+  createBudget(data);
+  closeNewBidWizard();
+  showPage("#licitacao");
+
+  if (data.startMode === "import") {
+    window.setTimeout(() => openBudgetImportModal(), 180);
+  }
+}
+
+function createBudget(options = {}) {
   const current = getActiveBudget();
   const nextIndex = state.budgets.length + 1;
+  const startMode = options.startMode || "blank";
+  const hasOption = (key) => Object.prototype.hasOwnProperty.call(options, key);
+  const templateItems =
+    startMode === "template"
+      ? defaultItems().map((item) => ({
+          ...item,
+          id: createId(),
+        }))
+      : [];
   const budget = {
     id: createId(),
     createdAt: new Date().toISOString(),
@@ -2840,17 +3304,20 @@ function createBudget() {
       companyDocument: current.bid.companyDocument,
       technicalOwner: current.bid.technicalOwner,
       technicalRegistry: current.bid.technicalRegistry,
-      title: `Nova licitação de saneamento ${nextIndex}`,
-      agency: "",
-      editalNumber: `Edital ${String(nextIndex).padStart(3, "0")}/2026`,
-      location: "",
-      openingDate: "",
+      title: hasOption("title") ? options.title : `Nova licitação de saneamento ${nextIndex}`,
+      agency: hasOption("agency") ? options.agency : "",
+      editalNumber: options.editalNumber || `Edital ${String(nextIndex).padStart(3, "0")}/2026`,
+      location: hasOption("location") ? options.location : "",
+      workType: hasOption("workType") ? options.workType : defaultBid().workType,
+      openingDate: hasOption("openingDate") ? options.openingDate : "",
+      executionDays: options.executionDays === undefined ? defaultBid().executionDays : parseNumber(options.executionDays),
+      validityDays: options.validityDays === undefined ? defaultBid().validityDays : parseNumber(options.validityDays),
       status: "Em orçamento",
     },
     bdi: {
       ...current.bdi,
     },
-    items: [],
+    items: templateItems,
   };
 
   state.budgets.unshift(budget);
@@ -2860,6 +3327,7 @@ function createBudget() {
   saveState();
   showToast("Nova licitação criada.");
   showPage("#licitacao");
+  return budget;
 }
 
 function selectBudget(id) {
@@ -2946,10 +3414,57 @@ function csvCell(value) {
 
 function normalizeHeader(value) {
   return String(value || "")
+    .trim()
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "");
+}
+
+function normalizeImportText(value) {
+  return String(value || "")
+    .trim()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[_/-]+/g, " ")
+    .replace(/[^a-z0-9]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function compactImportText(value) {
+  return normalizeImportText(value).replace(/\s+/g, "");
+}
+
+function levenshteinDistance(a, b) {
+  const left = String(a || "");
+  const right = String(b || "");
+  if (left === right) return 0;
+  if (!left.length) return right.length;
+  if (!right.length) return left.length;
+
+  const previous = Array.from({ length: right.length + 1 }, (_, index) => index);
+  const current = new Array(right.length + 1);
+
+  for (let i = 0; i < left.length; i += 1) {
+    current[0] = i + 1;
+    for (let j = 0; j < right.length; j += 1) {
+      const cost = left[i] === right[j] ? 0 : 1;
+      current[j + 1] = Math.min(current[j] + 1, previous[j + 1] + 1, previous[j] + cost);
+    }
+    previous.splice(0, previous.length, ...current);
+  }
+
+  return previous[right.length];
+}
+
+function textSimilarity(a, b) {
+  const left = compactImportText(a);
+  const right = compactImportText(b);
+  const maxLength = Math.max(left.length, right.length);
+  if (!maxLength) return 1;
+  return 1 - levenshteinDistance(left, right) / maxLength;
 }
 
 function numberForCsv(value) {
@@ -2981,8 +3496,8 @@ function exportCsv() {
   const budgetSummary = calculateBudget(budget);
   const classificationById = new Map(budgetSummary.classifiedItems.map((item) => [item.id, item]));
   const header = [
-    "Etapa",
-    "Código",
+    "Grupo",
+    "Item",
     "Descrição",
     "Unidade",
     "Quantidade",
@@ -3137,7 +3652,7 @@ function exportXls() {
         <h2>Planilha orçamentária</h2>
         <table>
           <tr>
-            <th>Etapa</th><th>Código</th><th>Descrição</th><th>Unidade</th><th>Quantidade</th>
+            <th>Grupo</th><th>Item</th><th>Descrição</th><th>Unidade</th><th>Quantidade</th>
             <th>Preço unitário sem BDI</th><th>Total sem BDI</th><th>Total com BDI</th><th>ABC</th><th>Participação</th>
           </tr>
           ${budgetRows.map((row) => spreadsheetRow(row)).join("")}
@@ -3146,7 +3661,7 @@ function exportXls() {
 
         <h2>Curva ABC</h2>
         <table>
-          <tr><th>Código</th><th>Descrição</th><th>Total com BDI</th><th>Participação</th><th>Acumulado</th><th>Classe</th></tr>
+          <tr><th>Item</th><th>Descrição</th><th>Total com BDI</th><th>Participação</th><th>Acumulado</th><th>Classe</th></tr>
           ${abcRows.map((row) => spreadsheetRow(row)).join("")}
         </table>
 
@@ -3295,7 +3810,7 @@ function buildProposalDocument() {
         <table>
           <thead>
             <tr>
-              <th>Etapa</th><th>Código</th><th>Descrição</th><th>Un.</th><th>Qtd.</th><th>Preço unit.</th><th>Total c/ BDI</th>
+              <th>Grupo</th><th>Item</th><th>Descrição</th><th>Un.</th><th>Qtd.</th><th>Preço unit.</th><th>Total c/ BDI</th>
             </tr>
           </thead>
           <tbody>
@@ -3308,7 +3823,7 @@ function buildProposalDocument() {
       <section>
         <h2>Itens críticos - Curva ABC</h2>
         <table>
-          <thead><tr><th>Código</th><th>Descrição</th><th>Total</th><th>Participação</th><th>Classe</th></tr></thead>
+          <thead><tr><th>Item</th><th>Descrição</th><th>Total</th><th>Participação</th><th>Classe</th></tr></thead>
           <tbody>
             ${proposalRows(
               topAbc.map((item) => [
@@ -3342,15 +3857,12 @@ function generateProfessionalProposal() {
 }
 
 function downloadCsvTemplate() {
-  const rows = [
-    ["Etapa", "Código", "Descrição", "Unidade", "Quantidade", "Preço unitário sem BDI"],
-    ["Rede coletora", "03.01", "Assentamento de tubo PVC Ocre DN 150 mm", "m", "100,00", "75,50"],
-    ["Poços de visita", "04.01", "Poço de visita em concreto armado", "un", "2,00", "3200,00"],
-  ];
+  const header = ["Grupo", "Item", "Descrição", "Unidade", "Quantidade", "Preço unitário sem BDI"];
+  const rows = [header, ...Array.from({ length: 20 }, () => header.map(() => ""))];
   const csv = rows.map((row) => row.map(csvCell).join(";")).join("\n");
 
-  downloadTextFile("orcasan-modelo-importacao.csv", `\uFEFF${csv}`, "text/csv;charset=utf-8");
-  showToast("Modelo CSV baixado.");
+  downloadTextFile("orcasan-planilha-padrao.csv", `\uFEFF${csv}`, "text/csv;charset=utf-8");
+  showToast("Planilha padrão baixada.");
 }
 
 function splitCsvLine(line, separator) {
@@ -3418,42 +3930,131 @@ function valueFromRow(row, possibleHeaders) {
   return key ? row[key] : "";
 }
 
-function findImportColumn(headers, aliases, usedIndexes = new Set()) {
-  const normalizedAliases = aliases.map(normalizeHeader);
+function importConfidenceFromScore(score) {
+  if (score >= 0.9) return "alta";
+  if (score >= 0.74) return "média";
+  return "baixa";
+}
 
-  for (const alias of normalizedAliases) {
-    const exactIndex = headers.findIndex((header, index) => !usedIndexes.has(index) && header === alias);
-    if (exactIndex >= 0) return exactIndex;
-  }
+function importAliasWeight(field, alias) {
+  const normalizedAlias = compactImportText(alias);
+  return IMPORT_ALIAS_WEIGHTS[field]?.[normalizedAlias] ?? 1;
+}
 
-  for (const alias of normalizedAliases) {
-    const similarIndex = headers.findIndex(
-      (header, index) =>
-        !usedIndexes.has(index) &&
-        alias.length >= 4 &&
-        header.length >= 4 &&
-        (header.includes(alias) || alias.includes(header)),
-    );
-    if (similarIndex >= 0) return similarIndex;
-  }
+function scoreImportHeader(header, aliases, field = "") {
+  const compactHeader = compactImportText(header);
+  if (!compactHeader) return { score: 0, alias: "", reason: "" };
 
-  return -1;
+  return aliases.reduce(
+    (best, alias) => {
+      const compactAlias = compactImportText(alias);
+      if (!compactAlias) return best;
+
+      const weight = importAliasWeight(field, alias);
+      let score = textSimilarity(header, alias);
+      let reason = "semelhança textual";
+
+      if (compactHeader === compactAlias) {
+        score = 1;
+        reason = "nome igual ao esperado";
+      } else if (
+        compactHeader.length >= 4 &&
+        compactAlias.length >= 4 &&
+        (compactHeader.includes(compactAlias) || compactAlias.includes(compactHeader))
+      ) {
+        const coverage = Math.min(compactHeader.length, compactAlias.length) / Math.max(compactHeader.length, compactAlias.length);
+        score = Math.max(score, coverage >= 0.55 ? 0.86 : 0.74);
+        reason = "nome parecido";
+      }
+
+      score *= weight;
+      return score > best.score ? { score, alias, reason } : best;
+    },
+    { score: 0, alias: "", reason: "" },
+  );
+}
+
+function findImportColumn(headerRow, field, aliases, usedIndexes = new Set()) {
+  const candidates = headerRow
+    .map((header, index) => ({
+      index,
+      header: String(header || "").trim(),
+      ...scoreImportHeader(header, aliases, field),
+    }))
+    .filter((candidate) => !usedIndexes.has(candidate.index) && candidate.header && candidate.score >= 0.62)
+    .sort((a, b) => b.score - a.score || a.index - b.index);
+
+  const best = candidates[0];
+  if (!best) return { index: -1, header: "", confidence: "", score: 0, alias: "", reason: "" };
+
+  return {
+    ...best,
+    confidence: importConfidenceFromScore(best.score),
+  };
 }
 
 function detectImportColumns(headerRow) {
-  const headers = headerRow.map(normalizeHeader);
   const usedIndexes = new Set();
   const columns = {};
+  const matches = {};
 
-  ["description", "unit", "quantity", "unitPrice", "code", "stage"].forEach((field) => {
-    const index = findImportColumn(headers, IMPORT_COLUMN_ALIASES[field], usedIndexes);
-    if (index >= 0) {
-      columns[field] = index;
-      usedIndexes.add(index);
+  IMPORT_FIELD_DEFINITIONS.forEach(({ key }) => {
+    const match = findImportColumn(headerRow, key, IMPORT_COLUMN_ALIASES[key] || [], usedIndexes);
+    matches[key] = match;
+
+    if (match.index >= 0) {
+      columns[key] = match.index;
+      usedIndexes.add(match.index);
     }
   });
 
-  return columns;
+  return {
+    columns,
+    matches,
+    headers: headerRow.map((header) => String(header || "").trim()),
+  };
+}
+
+function scoreImportDetection(row, detection) {
+  const nonEmptyCount = row.filter(Boolean).length;
+  const recommendedScore = RECOMMENDED_IMPORT_COLUMNS.reduce((total, field) => {
+    const match = detection.matches[field];
+    return total + (match?.index >= 0 ? 1 + match.score : 0);
+  }, 0);
+  const optionalScore = ["code", "stage"].reduce((total, field) => {
+    const match = detection.matches[field];
+    return total + (match?.index >= 0 ? match.score : 0);
+  }, 0);
+
+  return recommendedScore * 100 + optionalScore * 12 + Math.min(nonEmptyCount, 12);
+}
+
+function findImportHeaderRow(cleanRows) {
+  const candidates = cleanRows.slice(0, 40).map((row, index) => {
+    const detection = detectImportColumns(row);
+    return {
+      index,
+      detection,
+      score: scoreImportDetection(row, detection),
+      nonEmptyCount: row.filter(Boolean).length,
+    };
+  });
+
+  const best = candidates
+    .filter((candidate) => candidate.nonEmptyCount >= 3)
+    .sort((a, b) => b.score - a.score || a.index - b.index)[0];
+
+  if (!best) {
+    return {
+      headerIndex: 0,
+      detection: detectImportColumns(cleanRows[0] || []),
+    };
+  }
+
+  return {
+    headerIndex: best.index,
+    detection: best.detection,
+  };
 }
 
 function importValue(row, index) {
@@ -3467,15 +4068,40 @@ function cleanSpreadsheetRows(rows) {
     .filter((row) => row.some(Boolean));
 }
 
-function itemsFromSpreadsheetRows(rows) {
-  const cleanRows = cleanSpreadsheetRows(rows);
-  if (cleanRows.length < 2) return [];
+function missingRequiredImportColumns(columns) {
+  return REQUIRED_IMPORT_COLUMNS.filter((field) => columns[field] === undefined || columns[field] < 0);
+}
 
-  const columns = detectImportColumns(cleanRows[0]);
-  const missingRequired = REQUIRED_IMPORT_COLUMNS.filter((field) => columns[field] === undefined);
+function hasImportDataRows(cleanRows, columns) {
+  if (!cleanRows.length || columns.description === undefined) return false;
+  return cleanRows.slice(1).some((row) => importValue(row, columns.description));
+}
+
+function duplicatedImportColumns(columns) {
+  const byIndex = new Map();
+
+  Object.keys(columns).forEach((field) => {
+    const index = columns[field];
+    if (index === undefined || index < 0) return;
+    byIndex.set(index, [...(byIndex.get(index) || []), field]);
+  });
+
+  return [...byIndex.values()].filter((fields) => fields.length > 1);
+}
+
+function itemsFromCleanRows(cleanRows, columns) {
+  const missingRequired = missingRequiredImportColumns(columns);
 
   if (missingRequired.length) {
-    throw new Error("Não foi possível identificar descrição, unidade, quantidade e preço unitário. Verifique a planilha e tente novamente.");
+    throw new Error("Escolha uma coluna para usar como descrição dos itens. Os demais campos podem ser importados ou preenchidos depois.");
+  }
+
+  if (!hasImportDataRows(cleanRows, columns)) {
+    throw new Error("A planilha tem cabeçalho, mas não tem linhas de itens abaixo dele. Escolha outro arquivo ou adicione itens na planilha antes de importar.");
+  }
+
+  if (duplicatedImportColumns(columns).length) {
+    throw new Error("Uma mesma coluna não pode ser usada em mais de um campo. Ajuste o mapeamento e tente novamente.");
   }
 
   return cleanRows
@@ -3484,8 +4110,8 @@ function itemsFromSpreadsheetRows(rows) {
       const description = importValue(row, columns.description);
       if (!description) return null;
 
-      const quantity = parseNumber(importValue(row, columns.quantity));
-      const unitPrice = parseNumber(importValue(row, columns.unitPrice));
+      const quantity = columns.quantity === undefined ? 1 : parseNumber(importValue(row, columns.quantity));
+      const unitPrice = columns.unitPrice === undefined ? 0 : parseNumber(importValue(row, columns.unitPrice));
 
       return {
         id: createId(),
@@ -3498,6 +4124,14 @@ function itemsFromSpreadsheetRows(rows) {
       };
     })
     .filter(Boolean);
+}
+
+function itemsFromSpreadsheetRows(rows) {
+  const cleanRows = cleanSpreadsheetRows(rows);
+  if (cleanRows.length < 2) return [];
+
+  const { headerIndex, detection } = findImportHeaderRow(cleanRows);
+  return itemsFromCleanRows(cleanRows.slice(headerIndex), detection.columns);
 }
 
 function itemsFromCsvRows(rows) {
@@ -3655,12 +4289,28 @@ async function parseXlsxTable(file) {
   return rowsFromWorksheetXml(sheetXml, parseSharedStrings(sharedStringsXml));
 }
 
-async function readBudgetImportItems(file) {
+async function readBudgetImportData(file) {
   const fileName = String(file?.name || "").toLowerCase();
   const isExcel = fileName.endsWith(".xlsx") || file?.type === "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
   const rows = isExcel ? await parseXlsxTable(file) : parseCsvTable(await file.text());
-  const items = itemsFromSpreadsheetRows(rows);
+  const cleanRows = cleanSpreadsheetRows(rows);
 
+  if (cleanRows.length < 2) {
+    throw new Error("Não foi possível encontrar cabeçalho e itens na planilha.");
+  }
+
+  const { headerIndex, detection } = findImportHeaderRow(cleanRows);
+
+  return {
+    rows: cleanRows.slice(headerIndex),
+    detection,
+    skippedRows: headerIndex,
+  };
+}
+
+async function readBudgetImportItems(file) {
+  const data = await readBudgetImportData(file);
+  const items = itemsFromCleanRows(data.rows, data.detection.columns);
   if (!items.length) throw new Error("Nenhum item válido foi encontrado. Linhas sem descrição foram ignoradas.");
   return items;
 }
@@ -3673,9 +4323,164 @@ function setImportMessage(message = "", kind = "error") {
   budgetImportMessage.classList.toggle("success", kind === "success");
 }
 
+function columnLabel(header, index) {
+  return `${String.fromCharCode(65 + index)} - ${header || `Coluna ${index + 1}`}`;
+}
+
+function importFieldKindLabel({ required, recommended }) {
+  if (required) return "Obrigatório";
+  if (recommended) return "Recomendado";
+  return "Opcional";
+}
+
+function renderBudgetImportMapping(detection) {
+  if (!budgetImportMapping || !budgetImportMappingBody) return;
+
+  const headers = detection.headers || [];
+  budgetImportMapping.hidden = false;
+  budgetImportMappingBody.innerHTML = IMPORT_FIELD_DEFINITIONS.map((definition) => {
+    const { key, label, required, defaultText } = definition;
+    const selectedIndex = pendingBudgetImportColumns[key] ?? -1;
+    const match = detection.matches?.[key] || {};
+    const confidence = match.confidence || "";
+    const statusText =
+      selectedIndex >= 0
+        ? `Coluna identificada automaticamente${confidence ? ` com confiança ${confidence}` : ""}.`
+        : required
+          ? "Escolha qual coluna da planilha será a descrição do item."
+          : `Se não adicionar, o OrçaSan usará ${defaultText}.`;
+    const statusClass = confidence ? `confidence-${normalizeHeader(confidence)}` : "confidence-empty";
+
+    return `
+      <div class="import-mapping-row">
+        <div>
+          <strong>${escapeHtml(label)}</strong>
+          <small>${escapeHtml(importFieldKindLabel(definition))}</small>
+        </div>
+        <select data-import-field="${escapeHtml(key)}" aria-label="${escapeHtml(label)}" ${!required && selectedIndex < 0 ? "disabled" : ""}>
+          <option value="">Não importar</option>
+          ${headers
+            .map(
+              (header, index) =>
+                `<option value="${index}" ${selectedIndex === index ? "selected" : ""}>${escapeHtml(columnLabel(header, index))}</option>`,
+            )
+            .join("")}
+        </select>
+        <span class="import-confidence ${statusClass}" data-import-confidence="${escapeHtml(key)}">${escapeHtml(
+          selectedIndex >= 0 && confidence ? confidence : required ? "pendente" : "ignorado",
+        )}</span>
+        <label class="import-toggle">
+          <input
+            type="checkbox"
+            data-import-enabled="${escapeHtml(key)}"
+            ${required || selectedIndex >= 0 ? "checked" : ""}
+            ${required ? "disabled" : ""}
+          />
+          <span>${required ? "Necessário" : "Adicionar"}</span>
+        </label>
+        <small data-import-helper="${escapeHtml(key)}">${escapeHtml(statusText)}</small>
+      </div>
+    `;
+  }).join("");
+}
+
+function selectedBudgetImportColumns() {
+  if (!budgetImportMappingBody) return { ...pendingBudgetImportColumns };
+
+  return [...budgetImportMappingBody.querySelectorAll("[data-import-field]")].reduce((columns, select) => {
+    const field = select.dataset.importField;
+    const definition = IMPORT_FIELD_DEFINITIONS.find((item) => item.key === field);
+    const enabledInput = budgetImportMappingBody.querySelector(`[data-import-enabled="${field}"]`);
+    const enabled = definition?.required || enabledInput?.checked;
+    const index = select.value === "" ? -1 : Number(select.value);
+    if (field && enabled && index >= 0) columns[field] = index;
+    return columns;
+  }, {});
+}
+
+function updateBudgetImportMappingStatus(columns) {
+  if (!budgetImportMappingBody) return;
+
+  IMPORT_FIELD_DEFINITIONS.forEach(({ key, required, defaultText }) => {
+    const select = budgetImportMappingBody.querySelector(`[data-import-field="${key}"]`);
+    const enabledInput = budgetImportMappingBody.querySelector(`[data-import-enabled="${key}"]`);
+    const confidence = budgetImportMappingBody.querySelector(`[data-import-confidence="${key}"]`);
+    const helper = budgetImportMappingBody.querySelector(`[data-import-helper="${key}"]`);
+    const enabled = required || enabledInput?.checked;
+    const selected = enabled && select?.value !== "";
+
+    if (select) {
+      select.disabled = !required && !enabled;
+      if (!enabled) select.value = "";
+    }
+
+    if (confidence) {
+      confidence.textContent = selected ? "manual" : required ? "pendente" : "ignorado";
+      confidence.className = `import-confidence ${selected ? "confidence-manual" : "confidence-empty"}`;
+    }
+
+    if (helper) {
+      helper.textContent = !enabled
+        ? `Este campo será ignorado. O padrão será ${defaultText}.`
+        : selected
+        ? "Coluna selecionada manualmente."
+        : required
+          ? "Escolha qual coluna da planilha será a descrição do item."
+          : `Selecione uma coluna ou desmarque para usar ${defaultText}.`;
+    }
+  });
+
+  pendingBudgetImportColumns = columns;
+}
+
+function clearBudgetImportPreview() {
+  pendingBudgetImportItems = [];
+  if (budgetImportPreview) budgetImportPreview.hidden = true;
+  if (budgetImportPreviewBody) budgetImportPreviewBody.innerHTML = "";
+  if (budgetImportSummary) budgetImportSummary.textContent = "0 item selecionado";
+  if (confirmBudgetImportButton) confirmBudgetImportButton.disabled = true;
+}
+
+function applyBudgetImportMapping({ manual = false, notice = "" } = {}) {
+  const columns = selectedBudgetImportColumns();
+  if (manual) updateBudgetImportMappingStatus(columns);
+
+  const missingRequired = missingRequiredImportColumns(columns);
+  if (missingRequired.length) {
+    clearBudgetImportPreview();
+    setImportMessage("Escolha uma coluna para usar como descrição dos itens. Os demais campos podem ser importados ou preenchidos depois.");
+    return;
+  }
+
+  if (duplicatedImportColumns(columns).length) {
+    clearBudgetImportPreview();
+    setImportMessage("Uma mesma coluna não pode ser usada em mais de um campo. Ajuste o mapeamento e tente novamente.");
+    return;
+  }
+
+  if (!hasImportDataRows(pendingBudgetImportRows, columns)) {
+    clearBudgetImportPreview();
+    setImportMessage("A planilha tem cabeçalho, mas não tem linhas de itens abaixo dele. O OrçaSan precisa de pelo menos uma linha para criar item no orçamento.");
+    return;
+  }
+
+  try {
+    const items = itemsFromCleanRows(pendingBudgetImportRows, columns);
+    if (!items.length) throw new Error("Nenhum item válido foi encontrado. Linhas sem descrição foram ignoradas.");
+    renderBudgetImportPreview(items, budgetImportFileName?.textContent || "", { message: notice });
+  } catch (error) {
+    clearBudgetImportPreview();
+    setImportMessage(error?.message || "Não foi possível importar este arquivo.");
+  }
+}
+
 function resetImportPreview() {
   pendingBudgetImportItems = [];
+  pendingBudgetImportRows = [];
+  pendingBudgetImportColumns = {};
   if (budgetImportFileName) budgetImportFileName.textContent = "Nenhum arquivo selecionado";
+  if (budgetImportMapping) budgetImportMapping.hidden = true;
+  if (budgetImportMappingBody) budgetImportMappingBody.innerHTML = "";
   if (budgetImportPreview) budgetImportPreview.hidden = true;
   if (budgetImportPreviewBody) budgetImportPreviewBody.innerHTML = "";
   if (budgetImportSummary) budgetImportSummary.textContent = "0 item selecionado";
@@ -3693,7 +4498,7 @@ function closeBudgetImportModal() {
   resetImportPreview();
 }
 
-function renderBudgetImportPreview(items, fileName) {
+function renderBudgetImportPreview(items, fileName, options = {}) {
   pendingBudgetImportItems = items;
   const totalPreview = items.reduce((sum, item) => sum + parseNumber(item.quantity) * parseNumber(item.unitPrice), 0);
   const previewRows = items.slice(0, 80);
@@ -3723,7 +4528,8 @@ function renderBudgetImportPreview(items, fileName) {
       .join("");
   }
 
-  setImportMessage(items.length > previewRows.length ? `Mostrando as primeiras ${previewRows.length} linhas na prévia.` : "", "success");
+  const previewLimitMessage = items.length > previewRows.length ? `Mostrando as primeiras ${previewRows.length} linhas na prévia.` : "";
+  setImportMessage(options.message || previewLimitMessage, "success");
 }
 
 async function previewBudgetImportFile(file) {
@@ -3733,8 +4539,27 @@ async function previewBudgetImportFile(file) {
   if (confirmBudgetImportButton) confirmBudgetImportButton.disabled = true;
 
   try {
-    const items = await readBudgetImportItems(file);
-    renderBudgetImportPreview(items, file.name);
+    const data = await readBudgetImportData(file);
+    pendingBudgetImportRows = data.rows;
+    pendingBudgetImportColumns = { ...data.detection.columns };
+
+    if (budgetImportFileName) budgetImportFileName.textContent = file.name;
+    renderBudgetImportMapping(data.detection);
+
+    const lowConfidenceFields = IMPORT_FIELD_DEFINITIONS.filter(({ key }) => {
+      const match = data.detection.matches?.[key];
+      return match?.index >= 0 && match.confidence === "baixa";
+    }).map(({ label }) => label);
+    const defaultedFields = IMPORT_FIELD_DEFINITIONS.filter(
+      ({ key, required, recommended }) => !required && recommended && data.detection.columns[key] === undefined,
+    ).map(({ label }) => label);
+    const notice = lowConfidenceFields.length
+      ? `Coluna identificada automaticamente. Verifique colunas com baixa confiança: ${lowConfidenceFields.join(", ")}.`
+      : defaultedFields.length
+        ? `Você pode confirmar assim mesmo. Campos sem coluna serão preenchidos com padrão: ${defaultedFields.join(", ")}.`
+      : "Colunas identificadas automaticamente. Confira a pré-visualização antes de confirmar.";
+
+    applyBudgetImportMapping({ notice });
   } catch (error) {
     resetImportPreview();
     if (budgetImportFileName) budgetImportFileName.textContent = file.name;
@@ -3768,7 +4593,7 @@ async function confirmBudgetImport() {
   showToast(`${importedItems.length} item(ns) importado(s).`);
 
   if (hasAuthenticatedSession()) {
-    await syncActiveBudgetToCloud();
+    await syncAllDataToCloud();
   }
 }
 
@@ -3801,6 +4626,7 @@ function importBackupFile(file) {
       const incomingState = parsed.data || parsed;
       const normalized = normalizeState(incomingState);
 
+      const confirmed = window.confirm("Importar este backup? Os dados atuais deste navegador serão substituídos.");
       if (!confirmed) return;
 
       state = normalized;
@@ -3819,6 +4645,7 @@ function importBackupFile(file) {
 }
 
 function resetDemo() {
+  const confirmed = window.confirm("Restaurar os dados de exemplo? Os dados atuais deste navegador serão substituídos.");
   if (!confirmed) return;
 
   state = clone(defaultState);
@@ -3976,7 +4803,11 @@ compositionList.addEventListener("click", (event) => {
   if (removeButton) removeComposition(removeButton.dataset.removeComposition);
 });
 
-newBudgetButtons.forEach((button) => button.addEventListener("click", createBudget));
+newBudgetButtons.forEach((button) => button.addEventListener("click", openNewBidWizard));
+closeNewBidWizardButton?.addEventListener("click", closeNewBidWizard);
+newBidWizardBackButton?.addEventListener("click", previousNewBidWizardStep);
+newBidWizardNextButton?.addEventListener("click", nextNewBidWizardStep);
+newBidWizardForm?.addEventListener("submit", submitNewBidWizard);
 addItemButton.addEventListener("click", addItem);
 addCompositionButton.addEventListener("click", addComposition);
 resetTaxBdiButton?.addEventListener("click", resetOutOfBdiTaxes);
@@ -3987,6 +4818,7 @@ changeBudgetImportFileButton?.addEventListener("click", () => csvFileInput.click
 cancelBudgetImportButton?.addEventListener("click", closeBudgetImportModal);
 closeBudgetImportButton?.addEventListener("click", closeBudgetImportModal);
 confirmBudgetImportButton?.addEventListener("click", confirmBudgetImport);
+budgetImportMappingBody?.addEventListener("change", () => applyBudgetImportMapping({ manual: true }));
 budgetImportModal?.addEventListener("click", (event) => {
   if (event.target === budgetImportModal) closeBudgetImportModal();
 });
@@ -4027,6 +4859,7 @@ logoutConfirmation?.addEventListener("click", (event) => {
   if (event.target === logoutConfirmation) closeLogoutConfirmation();
 });
 window.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && newBidWizard && !newBidWizard.hidden) closeNewBidWizard();
   if (event.key === "Escape" && logoutConfirmation && !logoutConfirmation.hidden) closeLogoutConfirmation();
   if (event.key === "Escape" && budgetImportModal && !budgetImportModal.hidden) closeBudgetImportModal();
 });
@@ -4047,6 +4880,19 @@ window.addEventListener("afterprint", () => {
   proposalPrint.hidden = true;
 });
 
+async function bootstrapCloudWorkspace() {
+  if (!hasAuthenticatedSession() || isRecoveryBridgePage()) return;
+
+  try {
+    setCloudStatus("Carregando dados da nuvem...", "");
+    await syncWorkspaceAfterLogin(loadPersistedWorkspaceState());
+  } catch (error) {
+    console.error(error);
+    setCloudStatus(supabaseErrorMessage(error), "error");
+    setSaveStatus("Usando dados deste dispositivo. Não consegui carregar a nuvem agora.");
+  }
+}
+
 setAuthMode("signin");
 renderCloudConfig();
 captureAuthRedirectSession();
@@ -4055,4 +4901,5 @@ hydrateForm();
 render();
 setupSectionObserver();
 setupPwa();
-saveState();
+setSaveStatus(hasPersistedWorkspaceData() ? `Dados carregados deste dispositivo às ${currentTimeLabel()}` : "Pronto para começar.");
+bootstrapCloudWorkspace().finally(() => offerAlternateOriginRecovery());

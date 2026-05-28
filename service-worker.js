@@ -1,10 +1,10 @@
-const CACHE_NAME = "orcasan-cache-v28";
+const CACHE_NAME = "orcasan-cache-v40";
 const INDEX_URL = "./index.html";
 const APP_ASSETS = [
   "./",
   INDEX_URL,
-  "./styles.css",
-  "./app.js",
+  "./styles.css?v=40",
+  "./app.js?v=40",
   "./manifest.webmanifest",
   "./icons/orcasan-icon.svg",
   "./icons/orcasan-icon-192.png",

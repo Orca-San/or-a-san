@@ -12,7 +12,7 @@
     <link rel="manifest" href="manifest.webmanifest" />
     <link rel="icon" href="icons/orcasan-icon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="icons/orcasan-icon-192.png" />
-    <link rel="stylesheet" href="styles.css" />
+    <link rel="stylesheet" href="styles.css?v=40" />
   </head>
   <body>
     <section class="auth-screen" id="auth-screen" hidden>
@@ -218,7 +218,7 @@
           <article class="panel chart-panel">
             <div class="panel-header">
               <div>
-                <p class="eyebrow">Etapas</p>
+                <p class="eyebrow">Grupos</p>
                 <h2>Distribuição do orçamento</h2>
               </div>
             </div>
@@ -491,7 +491,7 @@
               <h2>Orçamento da licitação</h2>
             </div>
             <div class="panel-actions">
-              <button class="ghost-button compact" id="download-csv-template" type="button">Modelo CSV</button>
+              <button class="ghost-button compact" id="download-csv-template" type="button">Planilha padrão</button>
               <button class="ghost-button compact" id="import-csv" type="button">Importar planilha</button>
               <button class="ghost-button compact" id="add-item" type="button">Adicionar item</button>
               <input id="csv-file" type="file" accept=".csv,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" hidden />
@@ -502,8 +502,8 @@
             <table>
               <thead>
                 <tr>
-                  <th>Etapa</th>
-                  <th>Código</th>
+                  <th>Grupo</th>
+                  <th>Item</th>
                   <th>Descrição</th>
                   <th>Un.</th>
                   <th>Qtd.</th>
@@ -714,13 +714,118 @@
     </div>
 
     <section class="proposal-print" id="proposal-print" hidden></section>
+    <section class="wizard-screen" id="new-bid-wizard" role="dialog" aria-modal="true" aria-labelledby="new-bid-wizard-title" hidden>
+      <div class="wizard-shell">
+        <aside class="wizard-aside">
+          <div>
+            <p class="eyebrow">Nova licitação</p>
+            <h2>Crie uma proposta com o caminho certo desde o início.</h2>
+            <p>Informe os dados principais do edital e escolha como deseja montar o orçamento.</p>
+          </div>
+          <ol class="wizard-steps" id="new-bid-wizard-steps" aria-label="Etapas do cadastro">
+            <li data-wizard-step-indicator="0" class="active"><span>1</span><strong>Dados básicos</strong></li>
+            <li data-wizard-step-indicator="1"><span>2</span><strong>Local e prazos</strong></li>
+            <li data-wizard-step-indicator="2"><span>3</span><strong>Como começar</strong></li>
+            <li data-wizard-step-indicator="3"><span>4</span><strong>Confirmação</strong></li>
+          </ol>
+        </aside>
+
+        <div class="wizard-main">
+          <div class="wizard-topline">
+            <div>
+              <span id="new-bid-wizard-progress">Passo 1 de 4</span>
+              <h2 id="new-bid-wizard-title">Dados básicos</h2>
+            </div>
+            <button class="icon-button" id="close-new-bid-wizard" type="button" aria-label="Fechar criação de licitação">×</button>
+          </div>
+
+          <form class="wizard-form" id="new-bid-wizard-form" novalidate>
+            <div class="wizard-step-panel" data-wizard-step="0">
+              <div class="form-grid">
+                <label>
+                  Nome da licitação
+                  <input id="wizard-bid-title" type="text" placeholder="Ex: Implantação de rede coletora - Setor Norte" required />
+                </label>
+                <label>
+                  Órgão
+                  <input id="wizard-bid-agency" type="text" placeholder="Ex: Prefeitura Municipal" />
+                </label>
+                <label>
+                  Tipo de obra
+                  <input id="wizard-bid-work-type" type="text" placeholder="Ex: Água, esgoto, drenagem ou estação elevatória" />
+                </label>
+              </div>
+            </div>
+
+            <div class="wizard-step-panel" data-wizard-step="1" hidden>
+              <div class="form-grid">
+                <label>
+                  Município/UF
+                  <input id="wizard-bid-location" type="text" placeholder="Ex: São Bento / SP" />
+                </label>
+                <label>
+                  Data de abertura
+                  <input id="wizard-bid-opening-date" type="date" />
+                </label>
+                <label>
+                  Prazo de execução
+                  <input id="wizard-bid-execution-days" type="number" min="0" step="1" placeholder="Ex: 180" />
+                </label>
+                <label>
+                  Validade da proposta
+                  <input id="wizard-bid-validity-days" type="number" min="0" step="1" placeholder="Ex: 60" />
+                </label>
+              </div>
+            </div>
+
+            <div class="wizard-step-panel" data-wizard-step="2" hidden>
+              <div class="wizard-choice-grid" role="radiogroup" aria-label="Como deseja começar">
+                <label class="wizard-choice">
+                  <input type="radio" name="wizard-start-mode" value="blank" checked />
+                  <span>
+                    <strong>Começar em branco</strong>
+                    <small>Cria a licitação sem itens para preencher manualmente.</small>
+                  </span>
+                </label>
+                <label class="wizard-choice">
+                  <input type="radio" name="wizard-start-mode" value="import" />
+                  <span>
+                    <strong>Importar planilha</strong>
+                    <small>Cria a licitação e abre o importador já existente.</small>
+                  </span>
+                </label>
+                <label class="wizard-choice">
+                  <input type="radio" name="wizard-start-mode" value="template" />
+                  <span>
+                    <strong>Usar modelo padrão</strong>
+                    <small>Inicia com itens de exemplo para acelerar a montagem.</small>
+                  </span>
+                </label>
+              </div>
+            </div>
+
+            <div class="wizard-step-panel" data-wizard-step="3" hidden>
+              <div class="wizard-summary" id="new-bid-wizard-summary" aria-live="polite"></div>
+            </div>
+
+            <p class="wizard-error" id="new-bid-wizard-error" role="alert" hidden></p>
+
+            <div class="wizard-actions">
+              <button class="ghost-button" id="new-bid-wizard-back" type="button">Voltar</button>
+              <button class="primary-button" id="new-bid-wizard-next" type="button">Próximo</button>
+              <button class="primary-button" id="new-bid-wizard-create" type="submit" hidden>Criar licitação</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </section>
     <div class="import-overlay" id="budget-import-modal" role="dialog" aria-modal="true" aria-labelledby="budget-import-title" hidden>
       <div class="import-dialog">
         <div class="import-header">
           <div>
             <p class="eyebrow">Importação</p>
             <h2 id="budget-import-title">Importar itens do orçamento</h2>
-            <p>Importe uma planilha com descrição, unidade, quantidade e preço unitário.</p>
+            <p>Escolha quais colunas da planilha entram no orçamento. Cada linha abaixo do cabeçalho vira um item.</p>
           </div>
           <button class="icon-button" id="close-budget-import" type="button" aria-label="Fechar importação">×</button>
         </div>
@@ -735,6 +840,16 @@
 
         <span class="import-message" id="budget-import-message" hidden></span>
 
+        <div class="import-mapping" id="budget-import-mapping" hidden>
+          <div class="import-mapping-heading">
+            <div>
+              <strong>Mapeamento das colunas</strong>
+              <span>Marque o que deseja adicionar e aponte a coluna correspondente, como em uma importação guiada.</span>
+            </div>
+          </div>
+          <div class="import-mapping-grid" id="budget-import-mapping-body"></div>
+        </div>
+
         <div class="import-preview" id="budget-import-preview" hidden>
           <div class="import-preview-header">
             <div>
@@ -747,8 +862,8 @@
             <table class="import-preview-table">
               <thead>
                 <tr>
-                  <th>Código</th>
-                  <th>Etapa</th>
+                  <th>Item</th>
+                  <th>Grupo</th>
                   <th>Descrição</th>
                   <th>Unidade</th>
                   <th>Quantidade</th>
@@ -779,6 +894,6 @@
       </div>
     </div>
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
-    <script src="app.js"></script>
+    <script src="app.js?v=40"></script>
   </body>
 </html>
