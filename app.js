@@ -6,6 +6,62 @@ const ADMIN_MODE_KEY = "orcasan.admin-mode.v1";
 const DEFAULT_CLOUD_API_URL = "https://dtfvrjlmncrijniqskhv.supabase.co/rest/v1/";
 const DEFAULT_CLOUD_PUBLISHABLE_KEY = "sb_publishable_qr_f9x2Os79RHQG0XhX_4Q_1uh14LGe";
 const PUBLIC_APP_URL = "https://orcasan.vercel.app/";
+const DEFAULT_BID_STATUS = "Identificada";
+const BID_STATUSES = [
+  "Identificada",
+  "Em análise",
+  "Aprovada",
+  "Recusada",
+  "Em orçamento",
+  "Em revisão",
+  "Proposta enviada",
+  "Ganha",
+  "Perdida",
+  "Declinada",
+];
+const LEGACY_BID_STATUS_MAP = {
+  Enviada: "Proposta enviada",
+  Vencida: "Perdida",
+  draft: "Identificada",
+  pricing: "Em orçamento",
+  review: "Em revisão",
+  submitted: "Proposta enviada",
+  won: "Ganha",
+  lost: "Perdida",
+  archived: "Declinada",
+};
+const ANALYSIS_AVAILABLE_STATUSES = ["Aprovada", "Em orçamento", "Em revisão", "Proposta enviada", "Ganha"];
+const BUDGET_AVAILABLE_STATUSES = ["Aprovada", "Em orçamento", "Em revisão", "Proposta enviada", "Ganha", "Perdida"];
+const BUDGET_WORK_STATUSES = ["Não iniciado", "Em andamento", "Aguardando informações", "Em revisão", "Finalizado"];
+const COMPOSITION_INPUT_TYPES = ["material", "labor", "equipment", "service", "other"];
+const COMPOSITION_INPUT_TYPE_LABELS = {
+  material: "Material",
+  labor: "Mão de obra",
+  equipment: "Equipamento",
+  service: "Serviço",
+  other: "Outro",
+};
+const TECHNICAL_QUALIFICATION_FIELDS = [
+  "acervo",
+  "cat",
+  "quantitativos",
+  "atestados",
+  "certificacoes",
+  "creaCau",
+  "equipeMinima",
+  "observacoes",
+];
+const TECHNICAL_QUALIFICATION_LABELS = {
+  acervo: "Acervo técnico",
+  cat: "CAT",
+  quantitativos: "Quantitativos mínimos",
+  atestados: "Atestados",
+  certificacoes: "Certificações",
+  creaCau: "CREA/CAU",
+  equipeMinima: "Equipe mínima",
+  observacoes: "Observações",
+};
+const TECHNICAL_QUALIFICATION_REQUIREMENT_KEYS = TECHNICAL_QUALIFICATION_FIELDS.filter((field) => field !== "observacoes");
 const REQUIRED_IMPORT_COLUMNS = ["description"];
 const RECOMMENDED_IMPORT_COLUMNS = ["description", "unit", "quantity", "unitPrice"];
 const IMPORT_FIELD_DEFINITIONS = [
@@ -52,6 +108,19 @@ const IMPORT_ALIAS_WEIGHTS = {
   },
 };
 
+function defaultTechnicalQualification() {
+  return {
+    acervo: "",
+    cat: "",
+    quantitativos: "",
+    atestados: "",
+    certificacoes: "",
+    creaCau: "",
+    equipeMinima: "",
+    observacoes: "",
+  };
+}
+
 function defaultBid() {
   return {
     company: "Construtora Exemplo Saneamento Ltda.",
@@ -62,11 +131,25 @@ function defaultBid() {
     location: "São Bento / SP",
     workType: "Rede coletora de esgoto",
     openingDate: "2026-05-14",
+    estimatedValue: 0,
+    sealedValue: false,
+    proposalDeadline: "",
+    modality: "",
     executionDays: 180,
     validityDays: 60,
     technicalOwner: "Eng. Responsável",
     technicalRegistry: "CREA 0000000000",
-    status: "Em orçamento",
+    status: DEFAULT_BID_STATUS,
+    decision: "",
+    rejectionReason: "",
+    decisionDate: "",
+    budgetStatus: "Não iniciado",
+    budgetOwner: "",
+    budgetStartDate: "",
+    budgetDueDate: "",
+    budgetProgress: 0,
+    budgetProgressManual: false,
+    technicalQualification: defaultTechnicalQualification(),
   };
 }
 
@@ -162,6 +245,24 @@ function defaultCompositions() {
       unit: "m",
       cost: 96.4,
       note: "Inclui equipe, preparo de vala, regularização de berço e assentamento.",
+      inputs: [
+        {
+          id: "composition-input-01-01",
+          type: "material",
+          description: "Tubo PVC Ocre DN 200 mm e conexões",
+          unit: "m",
+          quantity: 1,
+          unitCost: 62.4,
+        },
+        {
+          id: "composition-input-01-02",
+          type: "labor",
+          description: "Equipe de assentamento e apoio",
+          unit: "m",
+          quantity: 1,
+          unitCost: 34,
+        },
+      ],
     },
     {
       id: "composition-02",
@@ -170,6 +271,24 @@ function defaultCompositions() {
       unit: "un",
       cost: 3120,
       note: "Com forma, armação, concreto, tampa e acabamento interno.",
+      inputs: [
+        {
+          id: "composition-input-02-01",
+          type: "material",
+          description: "Concreto, aço, formas e tampa",
+          unit: "un",
+          quantity: 1,
+          unitCost: 2280,
+        },
+        {
+          id: "composition-input-02-02",
+          type: "labor",
+          description: "Equipe de execução e acabamento",
+          unit: "un",
+          quantity: 1,
+          unitCost: 840,
+        },
+      ],
     },
     {
       id: "composition-03",
@@ -178,6 +297,24 @@ function defaultCompositions() {
       unit: "m²",
       cost: 88.6,
       note: "Base compactada, imprimação, CBUQ e acabamento de bordas.",
+      inputs: [
+        {
+          id: "composition-input-03-01",
+          type: "material",
+          description: "CBUQ, imprimação e material de base",
+          unit: "m²",
+          quantity: 1,
+          unitCost: 61.8,
+        },
+        {
+          id: "composition-input-03-02",
+          type: "equipment",
+          description: "Compactador, ferramentas e apoio operacional",
+          unit: "m²",
+          quantity: 1,
+          unitCost: 26.8,
+        },
+      ],
     },
   ];
 }
@@ -208,9 +345,9 @@ let deferredInstallPrompt = null;
 let pendingBudgetImportItems = [];
 let pendingBudgetImportRows = [];
 let pendingBudgetImportColumns = {};
+let pendingTechnicalQualificationSuggestion = null;
 let newBidWizardStep = 0;
 
-const BID_STATUSES = ["Em orçamento", "Em revisão", "Enviada", "Vencida", "Perdida"];
 const NEW_BID_WIZARD_TITLES = ["Dados básicos", "Local e prazos", "Como deseja começar", "Confirmação"];
 
 const currencyFormatter = new Intl.NumberFormat("pt-BR", {
@@ -236,6 +373,33 @@ const authBackApp = document.querySelector("#auth-back-app");
 const itemsBody = document.querySelector("#items-body");
 const abcList = document.querySelector("#abc-list");
 const alertsList = document.querySelector("#alerts-list");
+const decisionSummary = document.querySelector("#decision-summary");
+const decisionStatus = document.querySelector("#decision-status");
+const approveOpportunityButton = document.querySelector("#approve-opportunity");
+const rejectOpportunityButton = document.querySelector("#reject-opportunity");
+const rejectionControls = document.querySelector("#rejection-controls");
+const rejectionReasonSelect = document.querySelector("#rejection-reason");
+const confirmRejectionButton = document.querySelector("#confirm-rejection");
+const technicalQualificationInputs = document.querySelectorAll("[data-tech]");
+const technicalQualificationCount = document.querySelector("#technical-qualification-count");
+const readEditalAiButton = document.querySelector("#read-edital-ai");
+const editalAiFileInput = document.querySelector("#edital-ai-file");
+const techAiStatus = document.querySelector("#tech-ai-status");
+const techAiReview = document.querySelector("#tech-ai-review");
+const techAiReviewFields = document.querySelector("#tech-ai-review-fields");
+const cancelTechAiReviewButton = document.querySelector("#cancel-tech-ai-review");
+const applyTechAiReviewButton = document.querySelector("#apply-tech-ai-review");
+const analysisLockedMessage = document.querySelector("#analysis-locked-message");
+const analysisAbcPanel = document.querySelector("#analysis-abc-panel");
+const analysisAlertsPanel = document.querySelector("#analysis-alerts-panel");
+const budgetApprovalBlocker = document.querySelector("#budget-approval-blocker");
+const budgetTableWrap = document.querySelector("#orcamento .table-wrap");
+const budgetPanelActions = document.querySelector("#orcamento .panel-actions");
+const budgetTrackingInputs = document.querySelectorAll("[data-budget-tracking]");
+const budgetProgressInput = document.querySelector("#budget-progress-input");
+const budgetProgressBar = document.querySelector("#budget-progress-bar");
+const budgetProgressMode = document.querySelector("#budget-progress-mode");
+const recalculateBudgetProgressButton = document.querySelector("#recalculate-budget-progress");
 const compositionList = document.querySelector("#composition-list");
 const reportList = document.querySelector("#report-list");
 const bidsList = document.querySelector("#bids-list");
@@ -253,6 +417,9 @@ const pageSections = document.querySelectorAll(".page-section");
 const dashboardRecentList = document.querySelector("#dashboard-recent-list");
 const bdiInputs = document.querySelectorAll(".bdi-input");
 const bidInputs = document.querySelectorAll("[data-bid]");
+const estimatedValueInput = document.querySelector('[data-bid="estimatedValue"]');
+const estimatedValueField = document.querySelector("[data-estimated-value-field]");
+const sealedValueInput = document.querySelector('[data-bid="sealedValue"]');
 const addItemButton = document.querySelector("#add-item");
 const addCompositionButton = document.querySelector("#add-composition");
 const resetTaxBdiButton = document.querySelector("#reset-tax-bdi");
@@ -435,6 +602,48 @@ function cleanText(value, fallback = "") {
   return repairTextEncoding(String(value ?? fallback));
 }
 
+function parseBoolean(value) {
+  if (typeof value === "boolean") return value;
+  if (typeof value === "number") return value !== 0;
+
+  const text = cleanText(value).trim().toLowerCase();
+  if (!text) return false;
+  return ["1", "true", "sim", "yes", "on"].includes(text);
+}
+
+function normalizeBidStatus(value) {
+  const status = cleanText(value).trim();
+  const mappedStatus = LEGACY_BID_STATUS_MAP[status] || status;
+
+  return BID_STATUSES.includes(mappedStatus) ? mappedStatus : DEFAULT_BID_STATUS;
+}
+
+function normalizeTechnicalQualification(value = {}) {
+  const source = value && typeof value === "object" && !Array.isArray(value) ? value : {};
+  const defaults = defaultTechnicalQualification();
+
+  return Object.fromEntries(
+    TECHNICAL_QUALIFICATION_FIELDS.map((field) => [field, cleanText(source[field] ?? defaults[field])]),
+  );
+}
+
+function normalizeBudgetWorkStatus(value) {
+  const status = cleanText(value).trim();
+  return BUDGET_WORK_STATUSES.includes(status) ? status : "Não iniciado";
+}
+
+function clampBudgetProgress(value) {
+  return Math.min(Math.max(parseNumber(value), 0), 100);
+}
+
+function calculateBudgetProgressFromItems(items = []) {
+  const totalItems = items.length;
+  if (!totalItems) return 0;
+
+  const pricedItems = items.filter((item) => parseNumber(item.unitPrice) > 0).length;
+  return Math.round((pricedItems / totalItems) * 100);
+}
+
 function cleanTextOrNull(value) {
   const text = cleanText(value).trim();
   return text || null;
@@ -471,14 +680,59 @@ function normalizeItem(item, index) {
   };
 }
 
-function normalizeComposition(composition, index) {
+function normalizeCompositionInput(input, index) {
+  const source = input && typeof input === "object" ? input : {};
+  const type = cleanText(source.type || source.inputType || source.input_type || "material");
+
   return {
+    id: source.id || `composition-input-${String(index + 1).padStart(2, "0")}`,
+    type: COMPOSITION_INPUT_TYPES.includes(type) ? type : "material",
+    description: cleanText(source.description || "Novo insumo"),
+    unit: cleanText(source.unit, "un") || "un",
+    quantity: parseNumber(source.quantity),
+    unitCost: parseNumber(source.unitCost ?? source.unit_cost),
+  };
+}
+
+function calculateCompositionCost(composition) {
+  const inputs = Array.isArray(composition?.inputs) ? composition.inputs : [];
+  return inputs.reduce((sum, input) => sum + parseNumber(input.quantity) * parseNumber(input.unitCost), 0);
+}
+
+function normalizeComposition(composition, index) {
+  const sourceInputs = Array.isArray(composition.inputs) ? composition.inputs : [];
+  const legacyCost = parseNumber(composition.cost);
+  const inputs = sourceInputs.length
+    ? sourceInputs.map(normalizeCompositionInput)
+    : legacyCost > 0
+      ? [
+          normalizeCompositionInput(
+            {
+              id: `${composition.id || `composition-${index + 1}`}-legacy-cost`,
+              type: "other",
+              description: "Custo manual anterior",
+              unit: composition.unit || "un",
+              quantity: 1,
+              unitCost: legacyCost,
+            },
+            0,
+          ),
+        ]
+      : [];
+
+  const normalized = {
     id: composition.id || `composition-${String(index + 1).padStart(2, "0")}`,
     code: cleanText(composition.code),
     title: cleanText(composition.title),
     unit: cleanText(composition.unit, "un") || "un",
-    cost: Number(composition.cost) || 0,
+    cost: 0,
     note: cleanText(composition.note),
+    inputs,
+  };
+
+  normalized.cost = calculateCompositionCost(normalized);
+  return {
+    ...normalized,
   };
 }
 
@@ -503,17 +757,38 @@ function normalizeBudget(rawBudget, index) {
   const base = demoBudget();
   const source = rawBudget && typeof rawBudget === "object" ? rawBudget : {};
   const items = Array.isArray(source.items) ? source.items : base.items;
+  const bid = {
+    ...Object.fromEntries(Object.entries(base.bid).map(([key, value]) => [key, typeof value === "string" ? cleanText(value) : value])),
+    ...Object.fromEntries(Object.entries(source.bid || {}).map(([key, value]) => [key, typeof value === "string" ? cleanText(value) : value])),
+  };
+
+  bid.estimatedValue = parseNumber(bid.estimatedValue);
+  bid.sealedValue = parseBoolean(bid.sealedValue);
+  bid.proposalDeadline = cleanText(bid.proposalDeadline);
+  bid.modality = cleanText(bid.modality);
+  bid.status = normalizeBidStatus(bid.status);
+  bid.decision = ["participar", "nao_participar"].includes(cleanText(bid.decision)) ? cleanText(bid.decision) : "";
+  bid.rejectionReason = cleanText(bid.rejectionReason);
+  bid.decisionDate = cleanText(bid.decisionDate);
+  bid.budgetStatus = normalizeBudgetWorkStatus(bid.budgetStatus);
+  bid.budgetOwner = cleanText(bid.budgetOwner);
+  bid.budgetStartDate = cleanText(bid.budgetStartDate);
+  bid.budgetDueDate = cleanText(bid.budgetDueDate);
+  bid.budgetProgressManual = parseBoolean(bid.budgetProgressManual);
+  bid.technicalQualification = normalizeTechnicalQualification(bid.technicalQualification);
+
+  const normalizedItems = items.map(normalizeItem);
+  bid.budgetProgress = bid.budgetProgressManual
+    ? clampBudgetProgress(bid.budgetProgress)
+    : calculateBudgetProgressFromItems(normalizedItems);
 
   return {
     id: source.id || `budget-${String(index + 1).padStart(2, "0")}`,
     cloudBidId: source.cloudBidId || "",
     createdAt: source.createdAt || new Date().toISOString(),
-    bid: {
-      ...Object.fromEntries(Object.entries(base.bid).map(([key, value]) => [key, cleanText(value)])),
-      ...Object.fromEntries(Object.entries(source.bid || {}).map(([key, value]) => [key, typeof value === "string" ? cleanText(value) : value])),
-    },
+    bid,
     bdi: normalizeBdi(source.bdi),
-    items: items.map(normalizeItem),
+    items: normalizedItems,
   };
 }
 
@@ -1930,11 +2205,25 @@ function cloudBidPayload(budget, organizationId) {
     location: cleanTextOrNull(bid.location),
     work_type: cleanTextOrNull(bid.workType),
     opening_date: cloudDateValue(bid.openingDate),
+    estimated_value: parseBoolean(bid.sealedValue) ? 0 : parseNumber(bid.estimatedValue),
+    sealed_value: parseBoolean(bid.sealedValue),
+    proposal_deadline: cloudDateValue(bid.proposalDeadline),
+    modality: cleanTextOrNull(bid.modality),
     execution_days: Number(bid.executionDays) || 0,
     validity_days: Number(bid.validityDays) || 0,
     technical_owner: cleanTextOrNull(bid.technicalOwner),
     technical_registry: cleanTextOrNull(bid.technicalRegistry),
-    status: cleanText(bid.status || "Em orçamento"),
+    technical_qualification: normalizeTechnicalQualification(bid.technicalQualification),
+    status: normalizeBidStatus(bid.status),
+    decision: cleanTextOrNull(bid.decision),
+    rejection_reason: cleanTextOrNull(bid.rejectionReason),
+    decision_date: cloudDateValue(bid.decisionDate),
+    budget_status: normalizeBudgetWorkStatus(bid.budgetStatus),
+    budget_owner: cleanTextOrNull(bid.budgetOwner),
+    budget_start_date: cloudDateValue(bid.budgetStartDate),
+    budget_due_date: cloudDateValue(bid.budgetDueDate),
+    budget_progress: clampBudgetProgress(bid.budgetProgress),
+    budget_progress_manual: parseBoolean(bid.budgetProgressManual),
     updated_at: new Date().toISOString(),
   };
 }
@@ -2036,14 +2325,27 @@ async function saveBudgetToCloud(budget, organization = null) {
   return cloudBid;
 }
 
-function cloudCompositionsPayload(organizationId) {
-  return state.compositions.map((composition, index) => normalizeComposition(cleanTextDeep(composition), index)).map((composition) => ({
+function cloudCompositionPayload(organizationId, composition, index = 0) {
+  const normalized = normalizeComposition(cleanTextDeep(composition), index);
+
+  return {
     organization_id: organizationId,
-    code: cleanTextOrNull(composition.code),
-    title: cleanText(composition.title || "Composição sem nome"),
-    unit: cleanText(composition.unit || "un"),
-    unit_cost: parseNumber(composition.cost),
-    note: cleanTextOrNull(composition.note),
+    code: cleanTextOrNull(normalized.code),
+    title: cleanText(normalized.title || "Composição sem nome"),
+    unit: cleanText(normalized.unit || "un"),
+    unit_cost: calculateCompositionCost(normalized),
+    note: cleanTextOrNull(normalized.note),
+  };
+}
+
+function cloudCompositionInputsPayload(compositionId, inputs = []) {
+  return inputs.map(normalizeCompositionInput).map((input) => ({
+    composition_id: compositionId,
+    input_type: input.type,
+    description: cleanText(input.description || "Insumo sem descrição"),
+    unit: cleanText(input.unit || "un"),
+    quantity: parseNumber(input.quantity),
+    unit_cost: parseNumber(input.unitCost),
   }));
 }
 
@@ -2053,14 +2355,32 @@ async function replaceCloudCompositions(organizationId) {
     prefer: "return=minimal",
   });
 
-  const payload = cloudCompositionsPayload(organizationId);
-  if (!payload.length) return [];
+  const createdCompositions = [];
 
-  return supabaseRequest("compositions", {
-    method: "POST",
-    body: payload,
-    prefer: "return=representation",
-  });
+  for (const [index, composition] of state.compositions.entries()) {
+    const normalized = normalizeComposition(cleanTextDeep(composition), index);
+    const createdRows = await supabaseRequest("compositions", {
+      method: "POST",
+      body: cloudCompositionPayload(organizationId, normalized, index),
+      prefer: "return=representation",
+    });
+    const createdComposition = Array.isArray(createdRows) ? createdRows[0] : createdRows;
+
+    if (!createdComposition?.id) continue;
+
+    const inputPayload = cloudCompositionInputsPayload(createdComposition.id, normalized.inputs);
+    if (inputPayload.length) {
+      await supabaseRequest("composition_inputs", {
+        method: "POST",
+        body: inputPayload,
+        prefer: "return=minimal",
+      });
+    }
+
+    createdCompositions.push(createdComposition);
+  }
+
+  return createdCompositions;
 }
 
 async function cloudBidLookupForOrganization(organizationId) {
@@ -2251,11 +2571,25 @@ function mapCloudBid(row, organization, bdiRow, itemRows, index) {
         location: row.location || "",
         workType: row.work_type || "",
         openingDate: row.opening_date || "",
+        estimatedValue: Number(row.estimated_value) || 0,
+        sealedValue: parseBoolean(row.sealed_value),
+        proposalDeadline: row.proposal_deadline || "",
+        modality: row.modality || "",
         executionDays: Number(row.execution_days) || 0,
         validityDays: Number(row.validity_days) || 0,
         technicalOwner: row.technical_owner || "",
         technicalRegistry: row.technical_registry || "",
-        status: row.status || "Em orçamento",
+        technicalQualification: row.technical_qualification || {},
+        status: normalizeBidStatus(row.status),
+        decision: row.decision || "",
+        rejectionReason: row.rejection_reason || "",
+        decisionDate: row.decision_date || "",
+        budgetStatus: row.budget_status || "",
+        budgetOwner: row.budget_owner || "",
+        budgetStartDate: row.budget_start_date || "",
+        budgetDueDate: row.budget_due_date || "",
+        budgetProgress: Number(row.budget_progress) || 0,
+        budgetProgressManual: parseBoolean(row.budget_progress_manual),
       },
       bdi: mapCloudBdi(bdiRow),
       items: itemRows.map(mapCloudItem),
@@ -2264,15 +2598,24 @@ function mapCloudBid(row, organization, bdiRow, itemRows, index) {
   );
 }
 
-function mapCloudComposition(row, index) {
+function mapCloudComposition(row, index, inputRows = []) {
   return normalizeComposition(
     {
       id: `cloud-composition-${row.id || index}`,
+      cloudCompositionId: row.id || "",
       code: row.code || "",
       title: row.title || "",
       unit: row.unit || "un",
       cost: Number(row.unit_cost) || 0,
       note: row.note || "",
+      inputs: (inputRows || []).map((inputRow, inputIndex) => ({
+        id: `cloud-composition-input-${inputRow.id || inputIndex}`,
+        type: inputRow.input_type || "material",
+        description: inputRow.description || "",
+        unit: inputRow.unit || "un",
+        quantity: Number(inputRow.quantity) || 0,
+        unitCost: Number(inputRow.unit_cost) || 0,
+      })),
     },
     index,
   );
@@ -2332,11 +2675,23 @@ async function persistCloudDataToLocal() {
     ),
   );
   const cloudCompositions = cloudCompositionRows.flat();
+  const mappedCompositions = [];
+
+  for (const [index, composition] of (cloudCompositions || []).entries()) {
+    const inputRows = await supabaseRequest(
+      `composition_inputs?composition_id=eq.${encodeURIComponent(composition.id)}&select=*&order=created_at.asc`,
+      {
+        prefer: "",
+      },
+    );
+
+    mappedCompositions.push(mapCloudComposition(composition, index, inputRows || []));
+  }
 
   state = normalizeState({
     activeBudgetId: budgets[0]?.id,
     budgets: budgets.length ? budgets : [demoBudget()],
-    compositions: (cloudCompositions || []).map(mapCloudComposition),
+    compositions: mappedCompositions,
   });
 
   hydrateForm();
@@ -2547,6 +2902,11 @@ function hydrateForm() {
 
   bidInputs.forEach((input) => {
     const key = input.dataset.bid;
+    if (input.type === "checkbox") {
+      input.checked = parseBoolean(budget.bid[key]);
+      return;
+    }
+
     input.value = typeof budget.bid[key] === "string" ? cleanText(budget.bid[key]) : (budget.bid[key] ?? "");
   });
 
@@ -2554,6 +2914,346 @@ function hydrateForm() {
     const key = input.dataset.bdi;
     input.value = budget.bdi[key] ?? 0;
   });
+
+  updateSealedValueControls();
+  renderTechnicalQualification();
+}
+
+function updateSealedValueControls() {
+  const sealed = parseBoolean(activeBid().sealedValue);
+
+  if (sealedValueInput) sealedValueInput.checked = sealed;
+  if (estimatedValueInput) estimatedValueInput.disabled = sealed;
+  if (estimatedValueField) estimatedValueField.hidden = sealed;
+}
+
+function isAnalysisAvailable(status = activeBid().status) {
+  return ANALYSIS_AVAILABLE_STATUSES.includes(normalizeBidStatus(status));
+}
+
+function isBudgetAvailable(status = activeBid().status) {
+  return BUDGET_AVAILABLE_STATUSES.includes(normalizeBidStatus(status));
+}
+
+function currentDateIso() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function renderOpportunityDecision() {
+  if (!decisionSummary) return;
+
+  const bid = activeBid();
+  const estimatedValue = parseBoolean(bid.sealedValue) ? "Sigiloso" : toCurrency(parseNumber(bid.estimatedValue));
+  const decisionLabel =
+    bid.decision === "participar"
+      ? `Participar • ${toDateBR(bid.decisionDate)}`
+      : bid.decision === "nao_participar"
+        ? `Não participar • ${cleanText(bid.rejectionReason || "Motivo não informado")}`
+        : "Sem decisão";
+
+  decisionSummary.innerHTML = [
+    ["Licitação", bid.title || "Licitação sem nome"],
+    ["Órgão", bid.agency || "Órgão não informado"],
+    ["Valor estimado", estimatedValue],
+    ["Prazo da proposta", bid.proposalDeadline ? toDateBR(bid.proposalDeadline) : "Não informado"],
+    ["Modalidade", bid.modality || "Não informada"],
+  ]
+    .map(
+      ([label, value]) => `
+        <div class="metric-card">
+          <span>${escapeHtml(label)}</span>
+          <strong>${escapeHtml(value)}</strong>
+        </div>
+      `,
+    )
+    .join("");
+
+  if (decisionStatus) decisionStatus.textContent = decisionLabel;
+  const isParticipating = bid.decision === "participar";
+  const isRejecting = bid.decision === "nao_participar";
+
+  if (approveOpportunityButton) {
+    approveOpportunityButton.classList.toggle("primary-button", isParticipating);
+    approveOpportunityButton.classList.toggle("ghost-button", !isParticipating);
+    approveOpportunityButton.setAttribute("aria-pressed", String(isParticipating));
+  }
+
+  if (rejectOpportunityButton) {
+    rejectOpportunityButton.classList.toggle("primary-button", isRejecting);
+    rejectOpportunityButton.classList.toggle("ghost-button", !isRejecting);
+    rejectOpportunityButton.setAttribute("aria-pressed", String(isRejecting));
+  }
+
+  if (rejectionReasonSelect) rejectionReasonSelect.value = bid.rejectionReason || "";
+  if (rejectionControls) rejectionControls.hidden = bid.decision !== "nao_participar";
+}
+
+function renderTechnicalQualification() {
+  if (!technicalQualificationInputs.length) return;
+
+  const bid = activeBid();
+  bid.technicalQualification = normalizeTechnicalQualification(bid.technicalQualification);
+  const filledRequirements = TECHNICAL_QUALIFICATION_REQUIREMENT_KEYS.filter((field) =>
+    cleanText(bid.technicalQualification[field]).trim(),
+  ).length;
+
+  technicalQualificationInputs.forEach((input) => {
+    const field = input.dataset.tech;
+    const value = bid.technicalQualification[field] || "";
+
+    if (document.activeElement !== input) input.value = value;
+    input.closest(".tech-field")?.classList.toggle("filled", Boolean(value.trim()));
+  });
+
+  if (technicalQualificationCount) {
+    technicalQualificationCount.textContent = `${filledRequirements} de ${TECHNICAL_QUALIFICATION_REQUIREMENT_KEYS.length} exigências preenchidas`;
+  }
+}
+
+function updateTechnicalQualification(field, value) {
+  const bid = activeBid();
+  bid.technicalQualification = normalizeTechnicalQualification(bid.technicalQualification);
+  bid.technicalQualification[field] = cleanText(value);
+  renderTechnicalQualification();
+  scheduleSave();
+}
+
+function setTechAiStatus(message = "", kind = "idle") {
+  if (!techAiStatus) return;
+
+  techAiStatus.textContent =
+    message || "A sugestão da IA deve ser revisada antes de aplicar na qualificação técnica.";
+  techAiStatus.classList.toggle("loading", kind === "loading");
+  techAiStatus.classList.toggle("error", kind === "error");
+}
+
+function readFileAsDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+
+    reader.addEventListener("load", () => resolve(String(reader.result || "")));
+    reader.addEventListener("error", () => reject(new Error("Não foi possível ler o arquivo.")));
+    reader.readAsDataURL(file);
+  });
+}
+
+function openTechnicalQualificationReview(fields) {
+  if (!techAiReview || !techAiReviewFields) return;
+
+  pendingTechnicalQualificationSuggestion = normalizeTechnicalQualification(fields);
+  techAiReviewFields.innerHTML = TECHNICAL_QUALIFICATION_FIELDS.map((field) => {
+    const label = TECHNICAL_QUALIFICATION_LABELS[field] || field;
+    const value = pendingTechnicalQualificationSuggestion[field] || "";
+
+    return `
+      <label>
+        ${escapeHtml(label)}
+        <textarea data-tech-review="${escapeHtml(field)}" rows="4" placeholder="Não informado">${escapeHtml(value)}</textarea>
+      </label>
+    `;
+  }).join("");
+
+  techAiReview.hidden = false;
+}
+
+function closeTechnicalQualificationReview() {
+  if (techAiReview) techAiReview.hidden = true;
+  if (techAiReviewFields) techAiReviewFields.innerHTML = "";
+  pendingTechnicalQualificationSuggestion = null;
+}
+
+function applyTechnicalQualificationReview() {
+  if (!pendingTechnicalQualificationSuggestion || !techAiReviewFields) return;
+
+  const bid = activeBid();
+  const reviewedFields = {};
+
+  techAiReviewFields.querySelectorAll("[data-tech-review]").forEach((input) => {
+    reviewedFields[input.dataset.techReview] = input.value;
+  });
+
+  bid.technicalQualification = normalizeTechnicalQualification({
+    ...bid.technicalQualification,
+    ...reviewedFields,
+  });
+
+  renderTechnicalQualification();
+  saveState(false);
+  closeTechnicalQualificationReview();
+  setTechAiStatus("Qualificação técnica atualizada. Revise os campos antes de usar na decisão.", "idle");
+  showToast("Qualificação técnica aplicada.");
+}
+
+async function analyzeEditalWithAi(file) {
+  if (!file) return;
+
+  const isPdf = file.type === "application/pdf" || String(file.name || "").toLowerCase().endsWith(".pdf");
+  if (!isPdf) {
+    setTechAiStatus("Selecione um arquivo PDF do edital.", "error");
+    return;
+  }
+
+  if (readEditalAiButton) {
+    readEditalAiButton.disabled = true;
+    readEditalAiButton.textContent = "Analisando...";
+  }
+  setTechAiStatus("Analisando edital...", "loading");
+
+  try {
+    const dataUrl = await readFileAsDataUrl(file);
+    const pdfBase64 = dataUrl.split(",")[1] || dataUrl;
+    const response = await fetch("/api/analisar-edital", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ pdfBase64 }),
+    });
+    const data = await response.json().catch(() => ({}));
+
+    if (!response.ok || !data?.ok) {
+      throw new Error(data?.error || "Falha ao analisar o edital.");
+    }
+
+    openTechnicalQualificationReview(data.fields || {});
+    setTechAiStatus("Sugestão pronta. Revise os campos antes de aplicar.", "idle");
+  } catch {
+    setTechAiStatus("Não foi possível ler o edital. Tente novamente ou preencha manualmente.", "error");
+  } finally {
+    if (readEditalAiButton) {
+      readEditalAiButton.disabled = false;
+      readEditalAiButton.textContent = "Ler edital com IA";
+    }
+    if (editalAiFileInput) editalAiFileInput.value = "";
+  }
+}
+
+function renderAnalysisGate() {
+  const available = isAnalysisAvailable();
+
+  if (analysisLockedMessage) analysisLockedMessage.hidden = available;
+  if (analysisAbcPanel) analysisAbcPanel.hidden = !available;
+  if (analysisAlertsPanel) analysisAlertsPanel.hidden = !available;
+}
+
+function renderBudgetGate() {
+  const available = isBudgetAvailable();
+
+  if (budgetApprovalBlocker) budgetApprovalBlocker.hidden = available;
+  if (budgetTableWrap) budgetTableWrap.hidden = !available;
+  if (budgetPanelActions) budgetPanelActions.hidden = !available;
+}
+
+function refreshBudgetProgress(budget = getActiveBudget()) {
+  const bid = budget.bid;
+
+  if (!parseBoolean(bid.budgetProgressManual)) {
+    bid.budgetProgress = calculateBudgetProgressFromItems(budget.items);
+  } else {
+    bid.budgetProgress = clampBudgetProgress(bid.budgetProgress);
+  }
+
+  return bid.budgetProgress;
+}
+
+function formatProgressInputValue(value) {
+  const progress = clampBudgetProgress(value);
+  return Number.isInteger(progress) ? String(progress) : progress.toFixed(2);
+}
+
+function renderBudgetTracking() {
+  if (!budgetTrackingInputs.length && !budgetProgressBar) return;
+
+  const budget = getActiveBudget();
+  const bid = budget.bid;
+  const progress = refreshBudgetProgress(budget);
+
+  budgetTrackingInputs.forEach((input) => {
+    const field = input.dataset.budgetTracking;
+
+    if (field === "budgetProgress") {
+      input.value = formatProgressInputValue(progress);
+      return;
+    }
+
+    input.value = bid[field] ?? "";
+  });
+
+  if (budgetProgressBar) {
+    budgetProgressBar.style.width = `${progress}%`;
+    budgetProgressBar.parentElement?.setAttribute("aria-valuenow", String(Math.round(progress)));
+  }
+
+  if (budgetProgressMode) {
+    budgetProgressMode.textContent = parseBoolean(bid.budgetProgressManual) ? "Manual" : "Automático";
+  }
+}
+
+function updateBudgetTracking(field, value) {
+  const bid = activeBid();
+
+  if (field === "budgetStatus") {
+    bid.budgetStatus = normalizeBudgetWorkStatus(value);
+  } else if (field === "budgetProgress") {
+    bid.budgetProgress = clampBudgetProgress(value);
+    bid.budgetProgressManual = true;
+  } else {
+    bid[field] = cleanText(value);
+  }
+
+  renderBudgetTracking();
+  scheduleSave();
+}
+
+function recalculateBudgetProgress() {
+  const bid = activeBid();
+  bid.budgetProgressManual = false;
+  bid.budgetProgress = calculateBudgetProgressFromItems(activeItems());
+  renderBudgetTracking();
+  saveState(true);
+  showToast("Avanço recalculado automaticamente.");
+}
+
+function applyOpportunityDecision(decision, rejectionReason = "") {
+  const bid = activeBid();
+
+  if (decision === "participar") {
+    bid.decision = "participar";
+    bid.rejectionReason = "";
+    bid.status = "Aprovada";
+  } else {
+    bid.decision = "nao_participar";
+    bid.rejectionReason = cleanText(rejectionReason);
+    bid.status = "Recusada";
+  }
+
+  bid.decisionDate = currentDateIso();
+  hydrateForm();
+  render();
+  saveState(true);
+}
+
+function approveOpportunity() {
+  applyOpportunityDecision("participar");
+  showToast("Oportunidade aprovada para orçamento.");
+}
+
+function showRejectionControls() {
+  if (rejectionControls) rejectionControls.hidden = false;
+  rejectionReasonSelect?.focus();
+}
+
+function confirmOpportunityRejection() {
+  const reason = cleanText(rejectionReasonSelect?.value).trim();
+
+  if (!reason) {
+    showToast("Selecione o motivo da recusa.");
+    rejectionReasonSelect?.focus();
+    return;
+  }
+
+  applyOpportunityDecision("nao_participar", reason);
+  showToast("Oportunidade recusada.");
 }
 
 function renderBidMeta() {
@@ -2563,7 +3263,7 @@ function renderBidMeta() {
     .sort((a, b) => String(a.bid.openingDate).localeCompare(String(b.bid.openingDate)));
   const nextBudget = datedBudgets[0] || getActiveBudget();
 
-  document.querySelector("#bid-status-pill").textContent = bid.status || "Em orçamento";
+  document.querySelector("#bid-status-pill").textContent = normalizeBidStatus(bid.status);
   document.querySelector("#next-opening-date").textContent = toDateBR(nextBudget.bid.openingDate);
   document.querySelector("#next-opening-summary").textContent =
     `${nextBudget.bid.editalNumber || "Sem edital"} - ${nextBudget.bid.workType || "Tipo não informado"}`;
@@ -2573,7 +3273,7 @@ function renderBidList() {
   const filteredBudgets =
     bidStatusFilter === "Todas"
       ? state.budgets
-      : state.budgets.filter((budget) => (budget.bid.status || "Em orçamento") === bidStatusFilter);
+      : state.budgets.filter((budget) => normalizeBidStatus(budget.bid.status) === bidStatusFilter);
 
   if (!filteredBudgets.length) {
     bidsList.innerHTML = '<div class="empty-state">Nenhuma licitação neste filtro.</div>';
@@ -2594,7 +3294,7 @@ function renderBidList() {
               <span>${escapeHtml(budget.bid.agency || "Órgão não informado")} • ${escapeHtml(budget.bid.location || "Local não informado")}</span>
             </div>
             <div class="bid-card-meta">
-              <span>${escapeHtml(budget.bid.status || "Em orçamento")}</span>
+              <span>${escapeHtml(normalizeBidStatus(budget.bid.status))}</span>
               <strong>${toCurrency(totals.totalWithBdi)}</strong>
               <span>Abertura: ${toDateBR(budget.bid.openingDate)}</span>
             </div>
@@ -2611,7 +3311,7 @@ function renderBidList() {
 
 function renderPipeline() {
   pipelineGrid.innerHTML = BID_STATUSES.map((status) => {
-    const budgets = state.budgets.filter((budget) => (budget.bid.status || "Em orçamento") === status);
+    const budgets = state.budgets.filter((budget) => normalizeBidStatus(budget.bid.status) === status);
     const total = budgets.reduce((sum, budget) => sum + calculateBudget(budget).totalWithBdi, 0);
 
     return `
@@ -2632,7 +3332,7 @@ function renderBidFilters() {
       const count =
         status === "Todas"
           ? state.budgets.length
-          : state.budgets.filter((budget) => (budget.bid.status || "Em orçamento") === status).length;
+          : state.budgets.filter((budget) => normalizeBidStatus(budget.bid.status) === status).length;
 
       return `
         <button class="filter-tab ${bidStatusFilter === status ? "active" : ""}" data-filter-status="${escapeHtml(status)}" type="button">
@@ -2647,19 +3347,54 @@ function renderDashboardOverview() {
   const portfolio = state.budgets.map((budget) => ({
     budget,
     totals: calculateBudget(budget),
+    bidStatus: normalizeBidStatus(budget.bid.status),
+    budgetStatus: normalizeBudgetWorkStatus(budget.bid.budgetStatus),
   }));
+  const approvedStatuses = ["Aprovada", "Em orçamento", "Em revisão", "Proposta enviada", "Ganha", "Perdida"];
+  const budgetInProgressStatuses = ["Em andamento", "Aguardando informações", "Em revisão"];
+  const participatedStatuses = ["Proposta enviada", "Ganha", "Perdida"];
+  const analysisStatuses = ["Identificada", "Em análise"];
   const totalValue = portfolio.reduce((sum, item) => sum + item.totals.totalWithBdi, 0);
-  const inProgress = state.budgets.filter((budget) =>
-    ["Em orçamento", "Em revisão"].includes(budget.bid.status || "Em orçamento"),
-  ).length;
-  const finished = state.budgets.filter((budget) =>
-    ["Enviada", "Vencida", "Perdida"].includes(budget.bid.status || "Em orçamento"),
-  ).length;
+  const countByBidStatus = (status) => portfolio.filter((item) => item.bidStatus === status).length;
+  const countByBidStatuses = (statuses) => portfolio.filter((item) => statuses.includes(item.bidStatus)).length;
+  const countByBudgetStatuses = (statuses) => portfolio.filter((item) => statuses.includes(item.budgetStatus)).length;
+  const sumEstimatedByBidStatuses = (statuses) =>
+    portfolio.reduce((sum, item) => (statuses.includes(item.bidStatus) ? sum + parseNumber(item.budget.bid.estimatedValue) : sum), 0);
+  const sumTotalByBidStatuses = (statuses) =>
+    portfolio.reduce((sum, item) => (statuses.includes(item.bidStatus) ? sum + item.totals.totalWithBdi : sum), 0);
+  const setMetric = (selector, value) => {
+    const element = document.querySelector(selector);
+    if (element) element.textContent = value;
+  };
 
-  document.querySelector("#metric-bids-total").textContent = state.budgets.length;
-  document.querySelector("#metric-portfolio-total").textContent = toCurrency(totalValue);
-  document.querySelector("#metric-in-progress").textContent = inProgress;
-  document.querySelector("#metric-finished").textContent = finished;
+  const totalCount = portfolio.length;
+  const approvedCount = countByBidStatuses(approvedStatuses);
+  const participatedCount = countByBidStatuses(participatedStatuses);
+  const wonCount = countByBidStatus("Ganha");
+  const budgetInProgressCount = countByBudgetStatuses(budgetInProgressStatuses);
+  const budgetFinishedCount = countByBudgetStatuses(["Finalizado"]);
+  const opportunityUseRate = totalCount ? (approvedCount / totalCount) * 100 : 0;
+  const successRate = participatedCount ? (wonCount / participatedCount) * 100 : null;
+
+  setMetric("#metric-bids-total", totalCount);
+  setMetric("#metric-identificadas", countByBidStatus("Identificada"));
+  setMetric("#metric-aprovadas", approvedCount);
+  setMetric("#metric-recusadas", countByBidStatus("Recusada"));
+  setMetric("#metric-orc-andamento", budgetInProgressCount);
+  setMetric("#metric-orc-concluidos", budgetFinishedCount);
+  setMetric("#metric-participadas", participatedCount);
+  setMetric("#metric-ganhas", wonCount);
+  setMetric("#metric-perdidas", countByBidStatus("Perdida"));
+  setMetric("#metric-declinadas", countByBidStatus("Declinada"));
+  setMetric("#metric-taxa-aproveitamento", toPercent(opportunityUseRate));
+  setMetric("#metric-taxa-sucesso", successRate === null ? "—" : toPercent(successRate));
+  setMetric("#metric-portfolio-total", toCurrency(totalValue));
+  setMetric("#metric-valor-analise", toCurrency(sumEstimatedByBidStatuses(analysisStatuses)));
+  setMetric("#metric-valor-propostas", toCurrency(sumTotalByBidStatuses(participatedStatuses)));
+  setMetric("#metric-valor-ganhas", toCurrency(sumTotalByBidStatuses(["Ganha"])));
+  setMetric("#metric-valor-perdidas", toCurrency(sumTotalByBidStatuses(["Perdida"])));
+  setMetric("#metric-in-progress", budgetInProgressCount);
+  setMetric("#metric-finished", budgetFinishedCount);
 
   if (!dashboardRecentList) return;
 
@@ -2672,7 +3407,7 @@ function renderDashboardOverview() {
       return `
         <article class="recent-bid-row ${isActive ? "active" : ""}">
           <div>
-            <span>${escapeHtml(budget.bid.editalNumber || "Sem edital")} • ${escapeHtml(budget.bid.status || "Em orçamento")}</span>
+            <span>${escapeHtml(budget.bid.editalNumber || "Sem edital")} • ${escapeHtml(normalizeBidStatus(budget.bid.status))}</span>
             <strong>${escapeHtml(budget.bid.title || "Licitação sem nome")}</strong>
             <small>${escapeHtml(budget.bid.agency || "Órgão não informado")} • ${toCurrency(totals.totalWithBdi)}</small>
           </div>
@@ -2926,27 +3661,114 @@ function renderAlerts(budgetSummary) {
     .join("");
 }
 
+function renderCompositionInputTypeOptions(currentType) {
+  return COMPOSITION_INPUT_TYPES.map(
+    (type) =>
+      `<option value="${escapeHtml(type)}" ${type === currentType ? "selected" : ""}>${escapeHtml(
+        COMPOSITION_INPUT_TYPE_LABELS[type],
+      )}</option>`,
+  ).join("");
+}
+
+function renderCompositionInputs(composition) {
+  if (!composition.inputs.length) {
+    return '<div class="empty-state compact-empty">Nenhum insumo cadastrado nesta composição.</div>';
+  }
+
+  return `
+    <div class="composition-input-table-wrap">
+      <table class="composition-input-table">
+        <thead>
+          <tr>
+            <th>Tipo</th>
+            <th>Descrição</th>
+            <th>Un.</th>
+            <th>Qtd.</th>
+            <th>Custo unit.</th>
+            <th>Subtotal</th>
+            <th>Ações</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${composition.inputs
+            .map((input) => {
+              const subtotal = parseNumber(input.quantity) * parseNumber(input.unitCost);
+
+              return `
+                <tr data-composition-input-id="${escapeHtml(input.id)}">
+                  <td>
+                    <select class="table-input composition-input-type" data-composition-input-field="type">
+                      ${renderCompositionInputTypeOptions(input.type)}
+                    </select>
+                  </td>
+                  <td>
+                    <input class="table-input composition-input-description" data-composition-input-field="description" value="${escapeHtml(input.description)}" />
+                  </td>
+                  <td>
+                    <input class="table-input unit-input" data-composition-input-field="unit" value="${escapeHtml(input.unit)}" />
+                  </td>
+                  <td>
+                    <input class="table-input number-input" data-composition-input-field="quantity" type="number" min="0" step="0.01" value="${parseNumber(input.quantity)}" />
+                  </td>
+                  <td>
+                    <input class="table-input money-input" data-composition-input-field="unitCost" type="number" min="0" step="0.01" value="${parseNumber(input.unitCost)}" />
+                  </td>
+                  <td class="money-cell" data-composition-input-subtotal="${escapeHtml(input.id)}">${toCurrency(subtotal)}</td>
+                  <td>
+                    <button class="icon-button danger-button" data-remove-composition-input="${escapeHtml(input.id)}" type="button" title="Remover insumo">×</button>
+                  </td>
+                </tr>
+              `;
+            })
+            .join("")}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
 function renderCompositions() {
   compositionList.innerHTML = state.compositions
-    .map(
-      (composition) => `
-        <div class="composition-row editable-composition" data-composition-id="${escapeHtml(composition.id)}">
-          <div class="composition-fields">
-            <input class="table-input code-input" data-composition-field="code" value="${escapeHtml(composition.code)}" aria-label="Código da composição" />
-            <input class="table-input composition-title-input" data-composition-field="title" value="${escapeHtml(composition.title)}" aria-label="Título da composição" />
-            <textarea class="composition-note-input" data-composition-field="note" aria-label="Observação da composição">${escapeHtml(composition.note)}</textarea>
+    .map((composition) => {
+      composition.cost = calculateCompositionCost(composition);
+
+      return `
+        <div class="composition-row editable-composition detailed-composition" data-composition-id="${escapeHtml(composition.id)}">
+          <div class="composition-header">
+            <div class="composition-fields">
+              <input class="table-input code-input" data-composition-field="code" value="${escapeHtml(composition.code)}" aria-label="Código da composição" />
+              <input class="table-input composition-title-input" data-composition-field="title" value="${escapeHtml(composition.title)}" aria-label="Título da composição" />
+              <textarea class="composition-note-input" data-composition-field="note" aria-label="Observação da composição">${escapeHtml(composition.note)}</textarea>
+            </div>
+            <div class="composition-price">
+              <input class="table-input unit-input" data-composition-field="unit" value="${escapeHtml(composition.unit)}" aria-label="Unidade" />
+              <span>Custo calculado</span>
+              <strong data-composition-cost>${toCurrency(composition.cost)}</strong>
+              <button class="ghost-button compact" data-add-composition-input="${escapeHtml(composition.id)}" type="button">Adicionar insumo</button>
+              <button class="ghost-button compact" data-apply-composition="${escapeHtml(composition.id)}" type="button">Aplicar</button>
+              <button class="icon-button danger-button" data-remove-composition="${escapeHtml(composition.id)}" type="button" title="Remover composição">×</button>
+            </div>
           </div>
-          <div class="composition-price">
-            <input class="table-input unit-input" data-composition-field="unit" value="${escapeHtml(composition.unit)}" aria-label="Unidade" />
-            <input class="table-input money-input" data-composition-field="cost" type="number" min="0" step="0.01" value="${parseNumber(composition.cost)}" aria-label="Custo unitário" />
-            <strong>${toCurrency(composition.cost)}</strong>
-            <button class="ghost-button compact" data-apply-composition="${escapeHtml(composition.id)}" type="button">Aplicar</button>
-            <button class="icon-button danger-button" data-remove-composition="${escapeHtml(composition.id)}" type="button" title="Remover composição">×</button>
-          </div>
+          ${renderCompositionInputs(composition)}
         </div>
-      `,
-    )
+      `;
+    })
     .join("");
+}
+
+function refreshCompositionTotals(compositionId) {
+  const composition = state.compositions.find((currentComposition) => currentComposition.id === compositionId);
+  const row = compositionList.querySelector(`[data-composition-id="${CSS.escape(compositionId)}"]`);
+  if (!composition || !row) return;
+
+  composition.cost = calculateCompositionCost(composition);
+  const total = row.querySelector("[data-composition-cost]");
+  if (total) total.textContent = toCurrency(composition.cost);
+
+  (composition.inputs || []).forEach((input) => {
+    const subtotal = row.querySelector(`[data-composition-input-subtotal="${CSS.escape(input.id)}"]`);
+    if (subtotal) subtotal.textContent = toCurrency(parseNumber(input.quantity) * parseNumber(input.unitCost));
+  });
 }
 
 function renderReports(budgetSummary) {
@@ -3010,6 +3832,11 @@ function render() {
   renderSummary(budgetSummary);
   renderCharts(budgetSummary);
   renderSettingsPanel(budgetSummary);
+  renderOpportunityDecision();
+  renderTechnicalQualification();
+  renderAnalysisGate();
+  renderBudgetGate();
+  renderBudgetTracking();
   renderTable(budgetSummary.classifiedItems);
   renderAbcList(budgetSummary.classifiedItems);
   renderAlerts(budgetSummary);
@@ -3151,11 +3978,60 @@ function updateComposition(id, field, value) {
   const composition = state.compositions.find((currentComposition) => currentComposition.id === id);
   if (!composition) return;
 
-  if (field === "cost") {
-    composition[field] = parseNumber(value);
+  composition[field] = cleanText(value);
+  composition.cost = calculateCompositionCost(composition);
+}
+
+function addCompositionInput(compositionId, type = "material") {
+  const composition = state.compositions.find((currentComposition) => currentComposition.id === compositionId);
+  if (!composition) return;
+
+  const inputType = COMPOSITION_INPUT_TYPES.includes(type) ? type : "material";
+  composition.inputs = Array.isArray(composition.inputs) ? composition.inputs : [];
+  composition.inputs.push(
+    normalizeCompositionInput(
+      {
+        id: createId(),
+        type: inputType,
+        description: inputType === "service" ? "Novo serviço" : "Novo insumo",
+        unit: composition.unit || "un",
+        quantity: 1,
+        unitCost: 0,
+      },
+      composition.inputs.length,
+    ),
+  );
+  composition.cost = calculateCompositionCost(composition);
+  renderCompositions();
+  scheduleSave();
+  showToast(inputType === "service" ? "Serviço adicionado." : "Insumo adicionado.");
+}
+
+function updateCompositionInput(compositionId, inputId, field, value) {
+  const composition = state.compositions.find((currentComposition) => currentComposition.id === compositionId);
+  const input = composition?.inputs?.find((currentInput) => currentInput.id === inputId);
+  if (!composition || !input) return;
+
+  if (field === "quantity" || field === "unitCost") {
+    input[field] = parseNumber(value);
+  } else if (field === "type") {
+    input.type = COMPOSITION_INPUT_TYPES.includes(value) ? value : "material";
   } else {
-    composition[field] = cleanText(value);
+    input[field] = cleanText(value);
   }
+
+  composition.cost = calculateCompositionCost(composition);
+}
+
+function removeCompositionInput(compositionId, inputId) {
+  const composition = state.compositions.find((currentComposition) => currentComposition.id === compositionId);
+  if (!composition) return;
+
+  composition.inputs = (composition.inputs || []).filter((input) => input.id !== inputId);
+  composition.cost = calculateCompositionCost(composition);
+  renderCompositions();
+  saveState(true);
+  showToast("Insumo removido.");
 }
 
 function addComposition() {
@@ -3168,6 +4044,7 @@ function addComposition() {
     unit: "un",
     cost: 0,
     note: "Descreva os insumos, produtividade e critérios de medição.",
+    inputs: [],
   });
 
   renderCompositions();
@@ -3194,6 +4071,8 @@ function removeComposition(id) {
 function applyComposition(id) {
   const composition = state.compositions.find((currentComposition) => currentComposition.id === id);
   if (!composition) return;
+  const calculatedCost = calculateCompositionCost(composition);
+  composition.cost = calculatedCost;
 
   activeItems().push({
     id: createId(),
@@ -3202,7 +4081,7 @@ function applyComposition(id) {
     description: composition.title,
     unit: composition.unit,
     quantity: 1,
-    unitPrice: parseNumber(composition.cost),
+    unitPrice: calculatedCost,
   });
 
   render();
@@ -3404,7 +4283,7 @@ function createBudget(options = {}) {
       openingDate: hasOption("openingDate") ? cleanOptions.openingDate : "",
       executionDays: cleanOptions.executionDays === undefined ? defaultBid().executionDays : parseNumber(cleanOptions.executionDays),
       validityDays: cleanOptions.validityDays === undefined ? defaultBid().validityDays : parseNumber(cleanOptions.validityDays),
-      status: "Em orçamento",
+      status: DEFAULT_BID_STATUS,
     },
     bdi: {
       ...current.bdi,
@@ -3442,7 +4321,7 @@ function duplicateBudget(id) {
   copy.createdAt = new Date().toISOString();
   copy.bid.title = `${source.bid.title || "Licitação"} - cópia`;
   copy.bid.editalNumber = `${source.bid.editalNumber || "Edital"} - cópia`;
-  copy.bid.status = "Em orçamento";
+  copy.bid.status = DEFAULT_BID_STATUS;
   copy.items = copy.items.map((item) => ({
     ...item,
     id: createId(),
@@ -4774,6 +5653,11 @@ function resetDemo() {
 function syncBidInputs(field, value, sourceInput = null) {
   bidInputs.forEach((input) => {
     if (input === sourceInput || input.dataset.bid !== field) return;
+    if (input.type === "checkbox") {
+      input.checked = parseBoolean(value);
+      return;
+    }
+
     input.value = value;
   });
 }
@@ -4781,10 +5665,18 @@ function syncBidInputs(field, value, sourceInput = null) {
 bidInputs.forEach((input) => {
   input.addEventListener("input", (event) => {
     const field = event.target.dataset.bid;
-    const value = cleanText(event.target.value);
+    let value = cleanText(event.target.value);
+
+    if (event.target.type === "checkbox") value = event.target.checked;
+    if (field === "estimatedValue") value = parseNumber(value);
+
     activeBid()[field] = value;
     syncBidInputs(field, value, event.target);
+    updateSealedValueControls();
     renderBidMeta();
+    renderOpportunityDecision();
+    renderAnalysisGate();
+    renderBudgetGate();
     renderPipeline();
     renderBidFilters();
     renderBidList();
@@ -4792,6 +5684,38 @@ bidInputs.forEach((input) => {
     renderSettingsPanel();
     scheduleSave();
   });
+});
+
+budgetTrackingInputs.forEach((input) => {
+  const handleBudgetTrackingChange = (event) => {
+    updateBudgetTracking(event.target.dataset.budgetTracking, event.target.value);
+  };
+
+  input.addEventListener("input", handleBudgetTrackingChange);
+  input.addEventListener("change", handleBudgetTrackingChange);
+});
+
+recalculateBudgetProgressButton?.addEventListener("click", recalculateBudgetProgress);
+
+technicalQualificationInputs.forEach((input) => {
+  input.addEventListener("input", (event) => {
+    updateTechnicalQualification(event.target.dataset.tech, event.target.value);
+  });
+});
+
+readEditalAiButton?.addEventListener("click", () => {
+  editalAiFileInput?.click();
+});
+
+editalAiFileInput?.addEventListener("change", (event) => {
+  analyzeEditalWithAi(event.target.files?.[0]);
+});
+
+cancelTechAiReviewButton?.addEventListener("click", closeTechnicalQualificationReview);
+applyTechAiReviewButton?.addEventListener("click", applyTechnicalQualificationReview);
+
+techAiReview?.addEventListener("click", (event) => {
+  if (event.target === techAiReview) closeTechnicalQualificationReview();
 });
 
 navItems.forEach((item) => {
@@ -4877,6 +5801,7 @@ itemsBody.addEventListener("input", (event) => {
   if (!target.matches("[data-item-id][data-field]")) return;
 
   updateItem(target.dataset.itemId, target.dataset.field, target.value);
+  if (target.dataset.field === "unitPrice") renderBudgetTracking();
   scheduleSave();
 });
 
@@ -4898,7 +5823,24 @@ itemsBody.addEventListener("click", (event) => {
 compositionList.addEventListener("input", (event) => {
   const target = event.target;
   const row = target.closest("[data-composition-id]");
-  if (!row || !target.matches("[data-composition-field]")) return;
+  if (!row) return;
+
+  if (target.matches("[data-composition-input-field]")) {
+    const inputRow = target.closest("[data-composition-input-id]");
+    if (!inputRow) return;
+
+    updateCompositionInput(
+      row.dataset.compositionId,
+      inputRow.dataset.compositionInputId,
+      target.dataset.compositionInputField,
+      target.value,
+    );
+    refreshCompositionTotals(row.dataset.compositionId);
+    scheduleSave();
+    return;
+  }
+
+  if (!target.matches("[data-composition-field]")) return;
 
   updateComposition(row.dataset.compositionId, target.dataset.compositionField, target.value);
   scheduleSave();
@@ -4907,7 +5849,24 @@ compositionList.addEventListener("input", (event) => {
 compositionList.addEventListener("change", (event) => {
   const target = event.target;
   const row = target.closest("[data-composition-id]");
-  if (!row || !target.matches("[data-composition-field]")) return;
+  if (!row) return;
+
+  if (target.matches("[data-composition-input-field]")) {
+    const inputRow = target.closest("[data-composition-input-id]");
+    if (!inputRow) return;
+
+    updateCompositionInput(
+      row.dataset.compositionId,
+      inputRow.dataset.compositionInputId,
+      target.dataset.compositionInputField,
+      target.value,
+    );
+    renderCompositions();
+    scheduleSave();
+    return;
+  }
+
+  if (!target.matches("[data-composition-field]")) return;
 
   updateComposition(row.dataset.compositionId, target.dataset.compositionField, target.value);
   render();
@@ -4916,9 +5875,14 @@ compositionList.addEventListener("change", (event) => {
 compositionList.addEventListener("click", (event) => {
   const applyButton = event.target.closest("[data-apply-composition]");
   const removeButton = event.target.closest("[data-remove-composition]");
+  const addInputButton = event.target.closest("[data-add-composition-input]");
+  const removeInputButton = event.target.closest("[data-remove-composition-input]");
+  const row = event.target.closest("[data-composition-id]");
 
+  if (addInputButton) addCompositionInput(addInputButton.dataset.addCompositionInput);
   if (applyButton) applyComposition(applyButton.dataset.applyComposition);
   if (removeButton) removeComposition(removeButton.dataset.removeComposition);
+  if (removeInputButton && row) removeCompositionInput(row.dataset.compositionId, removeInputButton.dataset.removeCompositionInput);
 });
 
 newBudgetButtons.forEach((button) => button.addEventListener("click", openNewBidWizard));
@@ -4928,6 +5892,9 @@ newBidWizardNextButton?.addEventListener("click", nextNewBidWizardStep);
 newBidWizardForm?.addEventListener("submit", submitNewBidWizard);
 addItemButton.addEventListener("click", addItem);
 addCompositionButton.addEventListener("click", addComposition);
+approveOpportunityButton?.addEventListener("click", approveOpportunity);
+rejectOpportunityButton?.addEventListener("click", showRejectionControls);
+confirmRejectionButton?.addEventListener("click", confirmOpportunityRejection);
 resetTaxBdiButton?.addEventListener("click", resetOutOfBdiTaxes);
 downloadCsvTemplateButton.addEventListener("click", downloadCsvTemplate);
 importCsvButton.addEventListener("click", openBudgetImportModal);

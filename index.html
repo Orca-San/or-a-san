@@ -12,7 +12,7 @@
     <link rel="manifest" href="manifest.webmanifest" />
     <link rel="icon" href="icons/orcasan-icon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="icons/orcasan-icon-192.png" />
-    <link rel="stylesheet" href="styles.css?v=41" />
+    <link rel="stylesheet" href="styles.css?v=46" />
   </head>
   <body>
     <section class="auth-screen" id="auth-screen" hidden>
@@ -151,26 +151,125 @@
           <button class="primary-button" data-new-budget type="button">+ Nova licitação</button>
         </section>
 
-        <section class="summary-grid page-section" data-page="dashboard" aria-label="Resumo da carteira">
-          <article class="metric">
-            <span>Total de licitações</span>
-            <strong id="metric-bids-total">0</strong>
-            <small>Carteira cadastrada</small>
+        <section class="dashboard-indicators page-section" id="dashboard" data-page="dashboard" aria-label="Indicadores da carteira">
+          <article class="panel dashboard-metric-panel">
+            <div class="panel-header">
+              <div>
+                <p class="eyebrow">Quantidades</p>
+                <h2>Situação das licitações</h2>
+              </div>
+            </div>
+            <div class="dashboard-metric-grid">
+              <article class="metric">
+                <span>Total de licitações</span>
+                <strong id="metric-bids-total">0</strong>
+                <small>Carteira cadastrada</small>
+              </article>
+              <article class="metric">
+                <span>Identificadas</span>
+                <strong id="metric-identificadas">0</strong>
+                <small>Oportunidades capturadas</small>
+              </article>
+              <article class="metric">
+                <span>Aprovadas</span>
+                <strong id="metric-aprovadas">0</strong>
+                <small>Já passaram da aprovação</small>
+              </article>
+              <article class="metric">
+                <span>Recusadas</span>
+                <strong id="metric-recusadas">0</strong>
+                <small>Não seguiram para orçamento</small>
+              </article>
+              <article class="metric">
+                <span>Orçamentos em andamento</span>
+                <strong id="metric-orc-andamento">0</strong>
+                <small>Status do orçamento ativo</small>
+                <span id="metric-in-progress" hidden>0</span>
+              </article>
+              <article class="metric">
+                <span>Orçamentos concluídos</span>
+                <strong id="metric-orc-concluidos">0</strong>
+                <small>Status finalizado</small>
+                <span id="metric-finished" hidden>0</span>
+              </article>
+              <article class="metric">
+                <span>Participadas</span>
+                <strong id="metric-participadas">0</strong>
+                <small>Proposta enviada, ganha ou perdida</small>
+              </article>
+              <article class="metric">
+                <span>Ganhas</span>
+                <strong id="metric-ganhas">0</strong>
+                <small>Contratações vencidas</small>
+              </article>
+              <article class="metric">
+                <span>Perdidas</span>
+                <strong id="metric-perdidas">0</strong>
+                <small>Propostas não vencedoras</small>
+              </article>
+              <article class="metric">
+                <span>Declinadas</span>
+                <strong id="metric-declinadas">0</strong>
+                <small>Oportunidades declinadas</small>
+              </article>
+            </div>
           </article>
-          <article class="metric">
-            <span>Valor total</span>
-            <strong id="metric-portfolio-total">R$ 0,00</strong>
-            <small>Soma das propostas com BDI</small>
+
+          <article class="panel dashboard-metric-panel">
+            <div class="panel-header">
+              <div>
+                <p class="eyebrow">Taxas</p>
+                <h2>Conversão da carteira</h2>
+              </div>
+            </div>
+            <div class="dashboard-metric-grid compact-dashboard-metric-grid">
+              <article class="metric">
+                <span>Taxa de aproveitamento</span>
+                <strong id="metric-taxa-aproveitamento">0,00%</strong>
+                <small>Aprovadas sobre total de oportunidades</small>
+              </article>
+              <article class="metric">
+                <span>Taxa de sucesso</span>
+                <strong id="metric-taxa-sucesso">—</strong>
+                <small>Ganhas sobre licitações participadas</small>
+              </article>
+            </div>
           </article>
-          <article class="metric">
-            <span>Em andamento</span>
-            <strong id="metric-in-progress">0</strong>
-            <small>Orçamento ou revisão</small>
-          </article>
-          <article class="metric">
-            <span>Finalizadas</span>
-            <strong id="metric-finished">0</strong>
-            <small>Enviadas, vencidas ou perdidas</small>
+
+          <article class="panel dashboard-metric-panel">
+            <div class="panel-header">
+              <div>
+                <p class="eyebrow">Valores</p>
+                <h2>Potencial financeiro</h2>
+              </div>
+            </div>
+            <div class="dashboard-metric-grid values-dashboard-metric-grid">
+              <article class="metric">
+                <span>Valor do portfólio</span>
+                <strong id="metric-portfolio-total">R$ 0,00</strong>
+                <small>Soma dos orçamentos com BDI</small>
+              </article>
+              <article class="metric">
+                <span>Oportunidades em análise</span>
+                <strong id="metric-valor-analise">R$ 0,00</strong>
+                <small>Valor estimado identificado/em análise</small>
+              </article>
+              <article class="metric">
+                <span>Propostas enviadas</span>
+                <strong id="metric-valor-propostas">R$ 0,00</strong>
+                <small>Valor com BDI enviado/ganho/perdido</small>
+              </article>
+              <article class="metric">
+                <span>Licitações ganhas</span>
+                <strong id="metric-valor-ganhas">R$ 0,00</strong>
+                <small>Valor contratado previsto</small>
+              </article>
+              <article class="metric">
+                <span>Licitações perdidas</span>
+                <strong id="metric-valor-perdidas">R$ 0,00</strong>
+                <small>Valor não convertido</small>
+              </article>
+            </div>
           </article>
         </section>
 
@@ -266,7 +365,7 @@
                 <p class="eyebrow">Dados do edital</p>
                 <h2>Licitação</h2>
               </div>
-              <span class="status-pill" id="bid-status-pill">Em orçamento</span>
+              <span class="status-pill" id="bid-status-pill">Identificada</span>
             </div>
 
             <div class="form-grid">
@@ -305,8 +404,24 @@
                 </select>
               </label>
               <label>
+                Modalidade
+                <input data-bid="modality" placeholder="Pregão, Concorrência, envelope..." />
+              </label>
+              <label>
                 Data de abertura
                 <input data-bid="openingDate" type="date" value="2026-05-14" />
+              </label>
+              <label>
+                Prazo para envio da proposta
+                <input data-bid="proposalDeadline" type="date" />
+              </label>
+              <label data-estimated-value-field>
+                Valor estimado da licitação (R$)
+                <input data-bid="estimatedValue" type="number" min="0" step="0.01" value="0" />
+              </label>
+              <label>
+                Valor sigiloso
+                <input data-bid="sealedValue" type="checkbox" />
               </label>
               <label>
                 Prazo de execução
@@ -327,11 +442,16 @@
               <label>
                 Status
                 <select data-bid="status">
+                  <option>Identificada</option>
+                  <option>Em análise</option>
+                  <option>Aprovada</option>
+                  <option>Recusada</option>
                   <option>Em orçamento</option>
                   <option>Em revisão</option>
-                  <option>Enviada</option>
-                  <option>Vencida</option>
+                  <option>Proposta enviada</option>
+                  <option>Ganha</option>
                   <option>Perdida</option>
+                  <option>Declinada</option>
                 </select>
               </label>
             </div>
@@ -498,6 +618,56 @@
             </div>
           </div>
 
+          <div class="empty-state" id="budget-approval-blocker" hidden>Esta licitação ainda não foi aprovada na etapa de Análise.</div>
+
+          <div class="budget-tracking" id="budget-tracking-panel">
+            <div class="panel-header budget-tracking-header">
+              <div>
+                <p class="eyebrow">Acompanhamento</p>
+                <h2>Acompanhamento do orçamento</h2>
+              </div>
+              <span class="status-pill" id="budget-progress-mode">Automático</span>
+            </div>
+
+            <div class="form-grid budget-tracking-grid">
+              <label>
+                Status do orçamento
+                <select data-budget-tracking="budgetStatus">
+                  <option>Não iniciado</option>
+                  <option>Em andamento</option>
+                  <option>Aguardando informações</option>
+                  <option>Em revisão</option>
+                  <option>Finalizado</option>
+                </select>
+              </label>
+              <label>
+                Responsável
+                <input data-budget-tracking="budgetOwner" type="text" placeholder="Nome do responsável" />
+              </label>
+              <label>
+                Início
+                <input data-budget-tracking="budgetStartDate" type="date" />
+              </label>
+              <label>
+                Previsão de conclusão
+                <input data-budget-tracking="budgetDueDate" type="date" />
+              </label>
+              <label class="budget-progress-field">
+                Percentual de avanço
+                <div class="budget-progress-control">
+                  <div class="budget-progress-track" role="progressbar" aria-label="Avanço do orçamento" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+                    <span id="budget-progress-bar"></span>
+                  </div>
+                  <div class="budget-progress-actions">
+                    <input id="budget-progress-input" data-budget-tracking="budgetProgress" type="number" min="0" max="100" step="1" />
+                    <span>%</span>
+                    <button class="ghost-button compact" id="recalculate-budget-progress" type="button">Recalcular automático</button>
+                  </div>
+                </div>
+              </label>
+            </div>
+          </div>
+
           <div class="table-wrap">
             <table>
               <thead>
@@ -523,6 +693,91 @@
           <article class="panel">
             <div class="panel-header">
               <div>
+                <p class="eyebrow">Decisão</p>
+                <h2>Decisão da oportunidade</h2>
+              </div>
+              <span class="status-pill" id="decision-status">Sem decisão</span>
+            </div>
+            <div class="summary-grid" id="decision-summary"></div>
+            <div class="button-row">
+              <button class="primary-button" id="approve-opportunity" type="button">Vamos participar</button>
+              <button class="ghost-button" id="reject-opportunity" type="button">Não vamos participar</button>
+            </div>
+            <div class="form-grid" id="rejection-controls" hidden>
+              <label>
+                Motivo da recusa
+                <select id="rejection-reason">
+                  <option value="">Selecione o motivo</option>
+                  <option>Falta de capacidade técnica</option>
+                  <option>Falta de capacidade operacional</option>
+                  <option>Prazo incompatível</option>
+                  <option>Baixa atratividade financeira</option>
+                  <option>Região não atendida</option>
+                  <option>Outros</option>
+                </select>
+              </label>
+              <button class="primary-button" id="confirm-rejection" type="button">Confirmar decisão</button>
+            </div>
+          </article>
+
+          <article class="panel technical-qualification-panel" id="technical-qualification">
+            <div class="panel-header">
+              <div>
+                <p class="eyebrow">Qualificação técnica</p>
+                <h2>Qualificação Técnica exigida</h2>
+              </div>
+              <div class="tech-ai-actions">
+                <span class="status-pill" id="technical-qualification-count">0 de 7 exigências preenchidas</span>
+                <button class="ghost-button compact" id="read-edital-ai" type="button">Ler edital com IA</button>
+                <input id="edital-ai-file" type="file" accept="application/pdf" hidden />
+              </div>
+            </div>
+            <p class="tech-ai-status" id="tech-ai-status" role="status" aria-live="polite">
+              A sugestão da IA deve ser revisada antes de aplicar na qualificação técnica.
+            </p>
+            <div class="tech-qualification-grid">
+              <label class="tech-field">
+                Acervo técnico exigido
+                <textarea data-tech="acervo" rows="3" placeholder="Não informado"></textarea>
+              </label>
+              <label class="tech-field">
+                CAT exigida
+                <textarea data-tech="cat" rows="3" placeholder="Não informado"></textarea>
+              </label>
+              <label class="tech-field">
+                Quantitativos mínimos
+                <textarea data-tech="quantitativos" rows="3" placeholder="Não informado"></textarea>
+              </label>
+              <label class="tech-field">
+                Atestados necessários
+                <textarea data-tech="atestados" rows="3" placeholder="Não informado"></textarea>
+              </label>
+              <label class="tech-field">
+                Certificações obrigatórias
+                <textarea data-tech="certificacoes" rows="3" placeholder="Não informado"></textarea>
+              </label>
+              <label class="tech-field">
+                CREA/CAU exigido
+                <textarea data-tech="creaCau" rows="3" placeholder="Não informado"></textarea>
+              </label>
+              <label class="tech-field">
+                Equipe mínima obrigatória
+                <textarea data-tech="equipeMinima" rows="3" placeholder="Não informado"></textarea>
+              </label>
+              <label class="tech-field tech-field-wide">
+                Observações
+                <textarea data-tech="observacoes" rows="3" placeholder="Não informado"></textarea>
+              </label>
+            </div>
+          </article>
+
+          <article class="panel" id="analysis-locked-message" hidden>
+            <div class="empty-state">Disponível após aprovação da oportunidade.</div>
+          </article>
+
+          <article class="panel" id="analysis-abc-panel">
+            <div class="panel-header">
+              <div>
                 <p class="eyebrow">Curva ABC</p>
                 <h2>Itens mais relevantes</h2>
               </div>
@@ -530,7 +785,7 @@
             <div class="abc-list" id="abc-list"></div>
           </article>
 
-          <article class="panel">
+          <article class="panel" id="analysis-alerts-panel">
             <div class="panel-header">
               <div>
                 <p class="eyebrow">Riscos</p>
@@ -906,7 +1161,23 @@
         </div>
       </div>
     </div>
+    <div class="confirm-overlay" id="tech-ai-review" role="dialog" aria-modal="true" aria-labelledby="tech-ai-review-title" hidden>
+      <div class="tech-ai-review-dialog">
+        <div class="panel-header">
+          <div>
+            <p class="eyebrow">Revisão da IA</p>
+            <h2 id="tech-ai-review-title">Conferir qualificação técnica</h2>
+            <p>A IA trouxe uma sugestão. Revise, ajuste o que precisar e só então aplique na licitação.</p>
+          </div>
+        </div>
+        <div class="tech-ai-review-grid" id="tech-ai-review-fields"></div>
+        <div class="button-row">
+          <button class="ghost-button" id="cancel-tech-ai-review" type="button">Cancelar</button>
+          <button class="primary-button" id="apply-tech-ai-review" type="button">Aplicar à qualificação técnica</button>
+        </div>
+      </div>
+    </div>
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
-    <script src="app.js?v=41"></script>
+    <script src="app.js?v=48"></script>
   </body>
 </html>

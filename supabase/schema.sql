@@ -35,7 +35,18 @@ create table public.organization_members (
   primary key (organization_id, user_id)
 );
 
-create type public.bid_status as enum ('draft', 'pricing', 'review', 'submitted', 'won', 'lost', 'archived');
+create type public.bid_status as enum (
+  'Identificada',
+  'Em análise',
+  'Aprovada',
+  'Recusada',
+  'Em orçamento',
+  'Em revisão',
+  'Proposta enviada',
+  'Ganha',
+  'Perdida',
+  'Declinada'
+);
 
 create table public.bids (
   id uuid primary key default gen_random_uuid(),
@@ -49,11 +60,25 @@ create table public.bids (
   state text,
   work_type text,
   opening_date date,
+  estimated_value numeric(18,2) default 0,
+  sealed_value boolean default false,
+  proposal_deadline date,
+  modality text,
   execution_days integer default 0,
   validity_days integer default 0,
   technical_owner text,
   technical_registry text,
-  status public.bid_status not null default 'pricing',
+  technical_qualification jsonb default '{}'::jsonb,
+  status public.bid_status not null default 'Identificada',
+  decision text,
+  rejection_reason text,
+  decision_date date,
+  budget_status text default 'Não iniciado',
+  budget_owner text,
+  budget_start_date date,
+  budget_due_date date,
+  budget_progress numeric(5,2) default 0,
+  budget_progress_manual boolean default false,
   notes text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
