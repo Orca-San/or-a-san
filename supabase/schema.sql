@@ -97,6 +97,7 @@ create table public.bdi_settings (
   pis_cofins numeric(8,4) not null default 0,
   cprb numeric(8,4) not null default 0,
   other_taxes numeric(8,4) not null default 0,
+  enabled_charges jsonb not null default '{}'::jsonb,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );

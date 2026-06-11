@@ -170,3 +170,7 @@ Regras:
     });
   }
 };
+
+module.exports.config = {
+  maxDuration: 60,
+};

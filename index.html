@@ -12,7 +12,7 @@
     <link rel="manifest" href="manifest.webmanifest" />
     <link rel="icon" href="icons/orcasan-icon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="icons/orcasan-icon-192.png" />
-    <link rel="stylesheet" href="styles.css?v=46" />
+    <link rel="stylesheet" href="styles.css?v=47" />
   </head>
   <body>
     <section class="auth-screen" id="auth-screen" hidden>
@@ -541,58 +541,98 @@
             <div class="bdi-list" aria-label="Composição do BDI">
               <div class="bdi-group">
                 <h3>Despesas indiretas</h3>
-                <label>
+                <label class="bdi-field">
                   Administração central - AC
                   <input class="bdi-input" data-bdi="admin" type="number" min="0" step="0.01" value="4.20" />
+                  <span class="bdi-include-row">
+                    <input class="bdi-include-input" data-bdi-include="admin" type="checkbox" checked />
+                    <span><strong data-bdi-include-label>Entra</strong> no BDI</span>
+                  </span>
                   <span class="field-help">Estrutura administrativa, engenharia, suporte, escritório e gestão.</span>
                 </label>
-                <label>
+                <label class="bdi-field">
                   Seguros - S
                   <input class="bdi-input" data-bdi="insurance" type="number" min="0" step="0.01" value="0.40" />
+                  <span class="bdi-include-row">
+                    <input class="bdi-include-input" data-bdi-include="insurance" type="checkbox" checked />
+                    <span><strong data-bdi-include-label>Entra</strong> no BDI</span>
+                  </span>
                   <span class="field-help">Seguros exigidos pelo edital ou pela operação da obra.</span>
                 </label>
-                <label>
+                <label class="bdi-field">
                   Garantias - G
                   <input class="bdi-input" data-bdi="guarantees" type="number" min="0" step="0.01" value="0.40" />
+                  <span class="bdi-include-row">
+                    <input class="bdi-include-input" data-bdi-include="guarantees" type="checkbox" checked />
+                    <span><strong data-bdi-include-label>Entra</strong> no BDI</span>
+                  </span>
                   <span class="field-help">Garantia contratual, caução, carta-fiança ou seguro-garantia.</span>
                 </label>
-                <label>
+                <label class="bdi-field">
                   Risco - R
                   <input class="bdi-input" data-bdi="risk" type="number" min="0" step="0.01" value="1.25" />
+                  <span class="bdi-include-row">
+                    <input class="bdi-include-input" data-bdi-include="risk" type="checkbox" checked />
+                    <span><strong data-bdi-include-label>Entra</strong> no BDI</span>
+                  </span>
                   <span class="field-help">Riscos técnicos, comerciais, climáticos, interferências e produtividade.</span>
                 </label>
-                <label>
+                <label class="bdi-field">
                   Despesas financeiras - DF
                   <input class="bdi-input" data-bdi="finance" type="number" min="0" step="0.01" value="1.10" />
+                  <span class="bdi-include-row">
+                    <input class="bdi-include-input" data-bdi-include="finance" type="checkbox" checked />
+                    <span><strong data-bdi-include-label>Entra</strong> no BDI</span>
+                  </span>
                   <span class="field-help">Custo financeiro entre execução, medição, faturamento e recebimento.</span>
                 </label>
               </div>
 
               <div class="bdi-group">
                 <h3>Resultado e tributos</h3>
-                <label>
+                <label class="bdi-field">
                   Lucro - L
                   <input class="bdi-input" data-bdi="profit" type="number" min="0" step="0.01" value="7.00" />
+                  <span class="bdi-include-row">
+                    <input class="bdi-include-input" data-bdi-include="profit" type="checkbox" checked />
+                    <span><strong data-bdi-include-label>Entra</strong> no BDI</span>
+                  </span>
                   <span class="field-help">Margem operacional pretendida para a proposta.</span>
                 </label>
-                <label>
+                <label class="bdi-field">
                   ISS
                   <input class="bdi-input" data-bdi="iss" type="number" min="0" step="0.01" value="3.00" />
+                  <span class="bdi-include-row">
+                    <input class="bdi-include-input" data-bdi-include="iss" type="checkbox" checked />
+                    <span><strong data-bdi-include-label>Entra</strong> no BDI</span>
+                  </span>
                   <span class="field-help">Alíquota municipal incidente sobre serviços, conforme edital/município.</span>
                 </label>
-                <label>
+                <label class="bdi-field">
                   PIS/COFINS
                   <input class="bdi-input" data-bdi="pisCofins" type="number" min="0" step="0.01" value="3.65" />
+                  <span class="bdi-include-row">
+                    <input class="bdi-include-input" data-bdi-include="pisCofins" type="checkbox" checked />
+                    <span><strong data-bdi-include-label>Entra</strong> no BDI</span>
+                  </span>
                   <span class="field-help">Tributos federais, conforme regime tributário da empresa.</span>
                 </label>
-                <label>
+                <label class="bdi-field">
                   CPRB/INSS sobre receita
                   <input class="bdi-input" data-bdi="cprb" type="number" min="0" step="0.01" value="0.00" />
+                  <span class="bdi-include-row">
+                    <input class="bdi-include-input" data-bdi-include="cprb" type="checkbox" checked />
+                    <span><strong data-bdi-include-label>Entra</strong> no BDI</span>
+                  </span>
                   <span class="field-help">Usar quando aplicável ao regime tributário e enquadramento da obra.</span>
                 </label>
-                <label>
+                <label class="bdi-field">
                   Outros tributos indiretos
                   <input class="bdi-input" data-bdi="otherTaxes" type="number" min="0" step="0.01" value="0.00" />
+                  <span class="bdi-include-row">
+                    <input class="bdi-include-input" data-bdi-include="otherTaxes" type="checkbox" checked />
+                    <span><strong data-bdi-include-label>Entra</strong> no BDI</span>
+                  </span>
                   <span class="field-help">Use apenas tributos indiretos previstos no edital. Não incluir IRPJ nem CSLL.</span>
                 </label>
                 <div class="out-of-bdi-note">
@@ -1178,6 +1218,6 @@
       </div>
     </div>
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
-    <script src="app.js?v=48"></script>
+    <script src="app.js?v=49"></script>
   </body>
 </html>

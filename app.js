@@ -33,6 +33,18 @@ const LEGACY_BID_STATUS_MAP = {
 const ANALYSIS_AVAILABLE_STATUSES = ["Aprovada", "Em orçamento", "Em revisão", "Proposta enviada", "Ganha"];
 const BUDGET_AVAILABLE_STATUSES = ["Aprovada", "Em orçamento", "Em revisão", "Proposta enviada", "Ganha", "Perdida"];
 const BUDGET_WORK_STATUSES = ["Não iniciado", "Em andamento", "Aguardando informações", "Em revisão", "Finalizado"];
+const BDI_COMPONENT_KEYS = [
+  "admin",
+  "insurance",
+  "guarantees",
+  "risk",
+  "finance",
+  "profit",
+  "iss",
+  "pisCofins",
+  "cprb",
+  "otherTaxes",
+];
 const COMPOSITION_INPUT_TYPES = ["material", "labor", "equipment", "service", "other"];
 const COMPOSITION_INPUT_TYPE_LABELS = {
   material: "Material",
@@ -165,7 +177,12 @@ function defaultBdi() {
     pisCofins: 3.65,
     cprb: 0,
     otherTaxes: 0,
+    enabledCharges: defaultBdiEnabledCharges(),
   };
+}
+
+function defaultBdiEnabledCharges() {
+  return Object.fromEntries(BDI_COMPONENT_KEYS.map((key) => [key, true]));
 }
 
 function defaultItems() {
@@ -416,6 +433,7 @@ const workspaceLinks = document.querySelectorAll("[data-workspace-link]");
 const pageSections = document.querySelectorAll(".page-section");
 const dashboardRecentList = document.querySelector("#dashboard-recent-list");
 const bdiInputs = document.querySelectorAll(".bdi-input");
+const bdiIncludeInputs = document.querySelectorAll("[data-bdi-include]");
 const bidInputs = document.querySelectorAll("[data-bid]");
 const estimatedValueInput = document.querySelector('[data-bid="estimatedValue"]');
 const estimatedValueField = document.querySelector("[data-estimated-value-field]");
@@ -736,6 +754,13 @@ function normalizeComposition(composition, index) {
   };
 }
 
+function normalizeBdiEnabledCharges(value = {}) {
+  const source = value && typeof value === "object" && !Array.isArray(value) ? value : {};
+  const defaults = defaultBdiEnabledCharges();
+
+  return Object.fromEntries(BDI_COMPONENT_KEYS.map((key) => [key, parseBoolean(source[key] ?? defaults[key])]));
+}
+
 function normalizeBdi(rawBdi) {
   const source = rawBdi && typeof rawBdi === "object" ? rawBdi : {};
   const normalized = {
@@ -750,6 +775,10 @@ function normalizeBdi(rawBdi) {
   }
 
   delete normalized.taxes;
+  BDI_COMPONENT_KEYS.forEach((key) => {
+    normalized[key] = parseNumber(normalized[key]);
+  });
+  normalized.enabledCharges = normalizeBdiEnabledCharges(source.enabledCharges || source.enabled_charges);
   return normalized;
 }
 
@@ -2243,6 +2272,7 @@ function cloudBdiPayload(bidId, bdi) {
     pis_cofins: parseNumber(normalized.pisCofins),
     cprb: parseNumber(normalized.cprb),
     other_taxes: parseNumber(normalized.otherTaxes),
+    enabled_charges: normalizeBdiEnabledCharges(normalized.enabledCharges),
   };
 }
 
@@ -2265,11 +2295,24 @@ async function replaceCloudBdiSettings(bidId, bdi) {
     prefer: "return=minimal",
   });
 
-  return supabaseRequest("bdi_settings", {
-    method: "POST",
-    body: cloudBdiPayload(bidId, bdi),
-    prefer: "return=representation",
-  });
+  const payload = cloudBdiPayload(bidId, bdi);
+
+  try {
+    return await supabaseRequest("bdi_settings", {
+      method: "POST",
+      body: payload,
+      prefer: "return=representation",
+    });
+  } catch (error) {
+    if (!/enabled_charges|schema cache|column/i.test(String(error?.message || error))) throw error;
+
+    const { enabled_charges: _enabledCharges, ...legacyPayload } = payload;
+    return supabaseRequest("bdi_settings", {
+      method: "POST",
+      body: legacyPayload,
+      prefer: "return=representation",
+    });
+  }
 }
 
 async function replaceCloudBudgetItems(bidId, items) {
@@ -2538,6 +2581,7 @@ function mapCloudBdi(row) {
     pisCofins: Number(row?.pis_cofins) || 0,
     cprb: Number(row?.cprb) || 0,
     otherTaxes: Number(row?.other_taxes) || 0,
+    enabledCharges: normalizeBdiEnabledCharges(row?.enabled_charges),
   });
 }
 
@@ -2794,18 +2838,31 @@ function toDateBR(value) {
   return dateFormatter.format(date);
 }
 
+function isBdiComponentEnabled(bdi, key) {
+  return parseBoolean(normalizeBdiEnabledCharges(bdi?.enabledCharges)[key]);
+}
+
+function bdiComponentValue(bdi, key) {
+  return isBdiComponentEnabled(bdi, key) ? parseNumber(bdi?.[key]) : 0;
+}
+
 function getBdiBreakdown(budget = getActiveBudget()) {
   const bdi = normalizeBdi(budget.bdi);
   const indirectPercent =
-    parseNumber(bdi.admin) +
-    parseNumber(bdi.insurance) +
-    parseNumber(bdi.guarantees) +
-    parseNumber(bdi.risk);
+    bdiComponentValue(bdi, "admin") +
+    bdiComponentValue(bdi, "insurance") +
+    bdiComponentValue(bdi, "guarantees") +
+    bdiComponentValue(bdi, "risk");
   const taxPercent =
-    parseNumber(bdi.iss) + parseNumber(bdi.pisCofins) + parseNumber(bdi.cprb) + parseNumber(bdi.otherTaxes);
+    bdiComponentValue(bdi, "iss") +
+    bdiComponentValue(bdi, "pisCofins") +
+    bdiComponentValue(bdi, "cprb") +
+    bdiComponentValue(bdi, "otherTaxes");
   const denominator = Math.max(1 - taxPercent / 100, 0.01);
   const factor =
-    ((1 + indirectPercent / 100) * (1 + parseNumber(bdi.finance) / 100) * (1 + parseNumber(bdi.profit) / 100)) /
+    ((1 + indirectPercent / 100) *
+      (1 + bdiComponentValue(bdi, "finance") / 100) *
+      (1 + bdiComponentValue(bdi, "profit") / 100)) /
     denominator;
   const totalPercent = (factor - 1) * 100;
 
@@ -2826,16 +2883,16 @@ function getBdiEntries(budget = getActiveBudget()) {
   const bdi = normalizeBdi(budget.bdi);
 
   return [
-    ["Administração central", bdi.admin],
-    ["Seguros", bdi.insurance],
-    ["Garantias", bdi.guarantees],
-    ["Risco", bdi.risk],
-    ["Despesas financeiras", bdi.finance],
-    ["Lucro", bdi.profit],
-    ["ISS", bdi.iss],
-    ["PIS/COFINS", bdi.pisCofins],
-    ["CPRB/INSS receita", bdi.cprb],
-    ["Outros tributos indiretos", bdi.otherTaxes],
+    ["Administração central", bdiComponentValue(bdi, "admin")],
+    ["Seguros", bdiComponentValue(bdi, "insurance")],
+    ["Garantias", bdiComponentValue(bdi, "guarantees")],
+    ["Risco", bdiComponentValue(bdi, "risk")],
+    ["Despesas financeiras", bdiComponentValue(bdi, "finance")],
+    ["Lucro", bdiComponentValue(bdi, "profit")],
+    ["ISS", bdiComponentValue(bdi, "iss")],
+    ["PIS/COFINS", bdiComponentValue(bdi, "pisCofins")],
+    ["CPRB/INSS receita", bdiComponentValue(bdi, "cprb")],
+    ["Outros tributos indiretos", bdiComponentValue(bdi, "otherTaxes")],
   ];
 }
 
@@ -2897,6 +2954,26 @@ function calculateBudget(budget = getActiveBudget()) {
   };
 }
 
+function updateBdiInclusionControls() {
+  if (!bdiIncludeInputs.length) return;
+
+  const bdi = normalizeBdi(activeBdi());
+  activeBdi().enabledCharges = bdi.enabledCharges;
+
+  bdiIncludeInputs.forEach((input) => {
+    const key = input.dataset.bdiInclude;
+    const enabled = parseBoolean(bdi.enabledCharges[key]);
+    const field = input.closest(".bdi-field");
+    const valueInput = document.querySelector(`.bdi-input[data-bdi="${key}"]`);
+    const statusLabel = field?.querySelector("[data-bdi-include-label]");
+
+    input.checked = enabled;
+    if (valueInput) valueInput.disabled = !enabled;
+    field?.classList.toggle("bdi-field-disabled", !enabled);
+    if (statusLabel) statusLabel.textContent = enabled ? "Entra" : "Fora";
+  });
+}
+
 function hydrateForm() {
   const budget = getActiveBudget();
 
@@ -2914,6 +2991,7 @@ function hydrateForm() {
     const key = input.dataset.bdi;
     input.value = budget.bdi[key] ?? 0;
   });
+  updateBdiInclusionControls();
 
   updateSealedValueControls();
   renderTechnicalQualification();
@@ -3420,6 +3498,7 @@ function renderDashboardOverview() {
 
 function renderSummary(budget) {
   const bdiBreakdown = getBdiBreakdown();
+  updateBdiInclusionControls();
   renderDashboardOverview();
   document.querySelector("#bdi-total").textContent = toPercent(budget.bdiPercent);
   document.querySelector("#bdi-total-hero").textContent = toPercent(bdiBreakdown.totalPercent);
@@ -4677,12 +4756,12 @@ function buildProposalDocument() {
     ];
   });
   const bdiRows = [
-    ["Administração central - AC", toPercent(parseNumber(budget.bdi.admin))],
-    ["Seguros - S", toPercent(parseNumber(budget.bdi.insurance))],
-    ["Garantias - G", toPercent(parseNumber(budget.bdi.guarantees))],
-    ["Risco - R", toPercent(parseNumber(budget.bdi.risk))],
-    ["Despesas financeiras - DF", toPercent(parseNumber(budget.bdi.finance))],
-    ["Lucro - L", toPercent(parseNumber(budget.bdi.profit))],
+    ["Administração central - AC", toPercent(bdiComponentValue(budget.bdi, "admin"))],
+    ["Seguros - S", toPercent(bdiComponentValue(budget.bdi, "insurance"))],
+    ["Garantias - G", toPercent(bdiComponentValue(budget.bdi, "guarantees"))],
+    ["Risco - R", toPercent(bdiComponentValue(budget.bdi, "risk"))],
+    ["Despesas financeiras - DF", toPercent(bdiComponentValue(budget.bdi, "finance"))],
+    ["Lucro - L", toPercent(bdiComponentValue(budget.bdi, "profit"))],
     ["Tributos totais - I", toPercent(bdiBreakdown.taxPercent)],
     ["BDI final", toPercent(bdiBreakdown.totalPercent)],
   ];
@@ -5741,6 +5820,17 @@ window.addEventListener("hashchange", () => showPage(window.location.hash, false
 bdiInputs.forEach((input) => {
   input.addEventListener("input", (event) => {
     activeBdi()[event.target.dataset.bdi] = parseNumber(event.target.value);
+    render();
+    scheduleSave();
+  });
+});
+
+bdiIncludeInputs.forEach((input) => {
+  input.addEventListener("change", (event) => {
+    const bdi = activeBdi();
+    bdi.enabledCharges = normalizeBdiEnabledCharges(bdi.enabledCharges);
+    bdi.enabledCharges[event.target.dataset.bdiInclude] = event.target.checked;
+    updateBdiInclusionControls();
     render();
     scheduleSave();
   });
