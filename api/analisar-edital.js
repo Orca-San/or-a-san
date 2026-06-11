@@ -1,5 +1,7 @@
 const ANTHROPIC_API_URL = "https://api.anthropic.com/v1/messages";
 const ANTHROPIC_MODEL = "claude-sonnet-4-20250514";
+const PDF_TEXT_LIMIT = 80000;
+const pdfParse = require("pdf-parse");
 
 const TECHNICAL_FIELDS = [
   "acervo",
@@ -62,6 +64,23 @@ function extractJsonPayload(text) {
   return clean.slice(start, end + 1);
 }
 
+async function extractPdfText(pdfBase64) {
+  try {
+    const buffer = Buffer.from(pdfBase64, "base64");
+    const data = await pdfParse(buffer);
+    const text = String(data?.text || "").trim();
+
+    if (!text) throw new Error("empty_pdf_text");
+
+    // Corte de segurança para evitar estourar o contexto da IA em editais muito longos.
+    return text.slice(0, PDF_TEXT_LIMIT);
+  } catch (error) {
+    const wrappedError = new Error("Não foi possível extrair texto do PDF (pode ser um PDF escaneado).");
+    wrappedError.cause = error;
+    throw wrappedError;
+  }
+}
+
 module.exports = async function handler(request, response) {
   response.setHeader("Cache-Control", "no-store");
 
@@ -87,10 +106,20 @@ module.exports = async function handler(request, response) {
     return response.status(400).json({ ok: false, error: "PDF nao informado." });
   }
 
+  let textoEdital;
+  try {
+    textoEdital = await extractPdfText(pdfBase64);
+  } catch (error) {
+    return response.status(422).json({
+      ok: false,
+      error: error.message,
+    });
+  }
+
   const prompt = `
 Voce e um especialista em licitacoes de obras de saneamento basico no Brasil.
 
-Leia o edital em PDF e extraia apenas as exigencias de qualificacao tecnica.
+Leia o texto do edital abaixo e extraia apenas as exigencias de qualificacao tecnica.
 
 Responda somente com JSON valido, sem comentarios, sem markdown e sem texto adicional.
 Use exatamente esta estrutura:
@@ -110,6 +139,9 @@ Regras:
 - Nao invente exigencias.
 - Use portugues brasileiro.
 - Resuma com objetividade, mantendo numeros, percentuais, unidades e prazos importantes quando existirem.
+
+Texto do edital:
+${textoEdital}
 `.trim();
 
   try {
@@ -126,20 +158,7 @@ Regras:
         messages: [
           {
             role: "user",
-            content: [
-              {
-                type: "document",
-                source: {
-                  type: "base64",
-                  media_type: "application/pdf",
-                  data: pdfBase64,
-                },
-              },
-              {
-                type: "text",
-                text: prompt,
-              },
-            ],
+            content: prompt,
           },
         ],
       }),
