@@ -72,10 +72,10 @@ async function extractPdfText(pdfBase64) {
 
     if (!text) throw new Error("empty_pdf_text");
 
-    // Corte de seguranÃ§a para evitar estourar o contexto da IA em editais muito longos.
+    // Corte de segurança para evitar estourar o contexto da IA em editais muito longos.
     return text.slice(0, PDF_TEXT_LIMIT);
   } catch (error) {
-    const wrappedError = new Error("NÃ£o foi possÃ­vel extrair texto do PDF (pode ser um PDF escaneado).");
+    const wrappedError = new Error("Não foi possível extrair texto do PDF (pode ser um PDF escaneado).");
     wrappedError.cause = error;
     throw wrappedError;
   }
