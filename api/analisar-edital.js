@@ -1,5 +1,5 @@
 const ANTHROPIC_API_URL = "https://api.anthropic.com/v1/messages";
-const ANTHROPIC_MODEL = "claude-sonnet-4-20250514";
+const ANTHROPIC_MODEL = "claude-sonnet-4-6";
 const PDF_TEXT_LIMIT = 80000;
 const pdfParse = require("pdf-parse/lib/pdf-parse.js");
 
@@ -72,10 +72,10 @@ async function extractPdfText(pdfBase64) {
 
     if (!text) throw new Error("empty_pdf_text");
 
-    // Corte de segurança para evitar estourar o contexto da IA em editais muito longos.
+    // Corte de seguranÃ§a para evitar estourar o contexto da IA em editais muito longos.
     return text.slice(0, PDF_TEXT_LIMIT);
   } catch (error) {
-    const wrappedError = new Error("Não foi possível extrair texto do PDF (pode ser um PDF escaneado).");
+    const wrappedError = new Error("NÃ£o foi possÃ­vel extrair texto do PDF (pode ser um PDF escaneado).");
     wrappedError.cause = error;
     throw wrappedError;
   }
@@ -164,11 +164,25 @@ ${textoEdital}
       }),
     });
 
-    const data = await anthropicResponse.json().catch(() => ({}));
+    const anthropicBody = await anthropicResponse.text();
+    let data = {};
+
+    try {
+      data = anthropicBody ? JSON.parse(anthropicBody) : {};
+    } catch {
+      data = {};
+    }
 
     if (!anthropicResponse.ok) {
-      const detail = data?.error?.message || `Anthropic respondeu ${anthropicResponse.status}.`;
-      return response.status(502).json({ ok: false, error: detail });
+      const detail = data?.error?.message || anthropicBody || `Anthropic respondeu ${anthropicResponse.status}.`;
+      console.error("Erro da API Anthropic", {
+        status: anthropicResponse.status,
+        body: anthropicBody,
+      });
+      return response.status(502).json({
+        ok: false,
+        error: `Erro da API Anthropic (${anthropicResponse.status}): ${detail}`,
+      });
     }
 
     const text = data?.content?.find((item) => item?.type === "text")?.text || data?.content?.[0]?.text || "";
@@ -177,15 +191,16 @@ ${textoEdital}
     try {
       parsed = JSON.parse(extractJsonPayload(text));
     } catch {
+      console.error("Resposta da Anthropic fora do formato esperado", { body: anthropicBody });
       return response.status(502).json({ ok: false, error: "A IA retornou uma resposta fora do formato esperado." });
     }
 
     return response.status(200).json({ ok: true, fields: normalizeFields(parsed) });
   } catch (error) {
-    return response.status(503).json({
+    console.error("Falha ao chamar a IA", error);
+    return response.status(500).json({
       ok: false,
-      error: "Nao foi possivel analisar o edital neste momento.",
-      detail: String(error?.message || error),
+      error: `Falha ao chamar a IA: ${String(error?.message || error)}`,
     });
   }
 };
